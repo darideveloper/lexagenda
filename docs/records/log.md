@@ -26,3 +26,6 @@ Shipped: stable UID and one SEQUENCE service that bumps only on create, move, ca
 
 ## client-updates — 2026-11-26
 Shipped: `client_create` from a typed number or a forwarded contact card with the WhatsApp name confirmed, `client_update` sending the stored bytes from the lawyer's device to book-only JIDs, a send log with 20/h, 60/d and 2 s caps in Spanish, and `delivery_mode: draft` read per send; 361 tests green, surface `local — prod unproven`.
+
+## voice-notes — 2026-11-26
+Shipped: `core.Note`, faster-whisper `small` in Spanish with a 2-minute cap, one voice note per inbound audio with media and model recorded, a single Spanish refusal for unreadable or over-cap audio, `note_add` writing only on confirm, and the case timeline showing body, source and model; 390 tests green, surface `local — prod unproven`.
