@@ -17,3 +17,6 @@ Shipped: clients and cases pages behind TOTP with a whitelisted edit surface, th
 
 ## files-search — 2026-11-26
 Shipped: content-addressed `Document`/`InboundMedia`, a 25 MB ingest cap, pdf/docx/xlsx/txt extraction with "sin texto", Spanish FTS with `pg_trgm` and a GIN-backed snippet query shared by `document_search` and `/documents/`, and a 90-day purge with refcounted blob release; 291 tests green, surface `local — prod unproven`.
+
+## plan-visit — 2026-11-26
+Shipped: one Places card or a Maps link (never a guessed pin), address reuse from the client's last resolved visit, `plan_visit` proposals that spend no second route, travel blocks from `starts_at - buffer - travel` to `starts_at - buffer`, and recompute on move and brief; 323 tests green, surface `local — prod unproven`.
