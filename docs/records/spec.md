@@ -14,7 +14,8 @@ no se reenvía, y un Job con error reintenta hasta tres veces antes de quedar `f
 ## Modelo
 
 Los modelos de dominio migran: `core.BaseLocation`, `core.Client`, `core.Case`, `agenda.Appointment`,
-`assistant.Thread`, `assistant.Message`, `assistant.Job`, `assistant.AuditLog`.
+`agenda.Deadline`, `agenda.TravelBlock`, `assistant.Thread`, `assistant.Message`, `assistant.Job`,
+`assistant.AuditLog`.
 
 ## Acceso
 
