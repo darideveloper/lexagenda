@@ -4,7 +4,7 @@ Every writer of an appointment goes through here, so no call site can forget the
 a recompute of the day's travel blocks never touches the calendar identity.
 """
 
-from apps.agenda.models import Appointment
+from apps.agenda.models import Appointment, TravelBlock
 
 
 def create(**fields):
@@ -25,6 +25,7 @@ def cancel(appointment):
         return appointment
     appointment.status = Appointment.CANCELLED
     appointment.save(update_fields=["status", "updated_at"])
+    TravelBlock.objects.filter(appointment=appointment).delete()  # a cancelled visit has no travel
     return bump(appointment)
 
 

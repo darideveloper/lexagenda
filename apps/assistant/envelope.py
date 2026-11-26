@@ -242,7 +242,7 @@ def _apply_plan_visit(args):
         )
     return (
         {"appointment_id": appointment.pk},
-        [{"tool": "appointment_delete", "args": {"appointment_id": appointment.pk}}],
+        [{"tool": "appointment_cancel", "args": {"appointment_id": appointment.pk}}],
         text,
     )
 

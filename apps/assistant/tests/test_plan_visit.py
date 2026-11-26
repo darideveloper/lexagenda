@@ -1,6 +1,8 @@
 import datetime
 from unittest import mock
 
+from django.contrib.auth.models import User
+from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 
@@ -252,13 +254,23 @@ class PlanVisitConfirmTests(TestCase):
         self.assertIn("Sin dirección verificada", result["text"])
 
     def test_undo_removes_the_visit_and_its_block(self):
+        User.objects.create(username="abogado", email="abogado@despacho.mx")
         proposal_id = self.propose()
         applied = TOOLS["confirm"]["fn"](self.thread, proposal_id=proposal_id)
+        appointment = Appointment.objects.get()
+        uid = appointment.ics_uid
 
         TOOLS["undo"]["fn"](self.thread, proposal_id=applied["proposal_id"])
 
-        self.assertEqual(Appointment.objects.count(), 0)
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.status, Appointment.CANCELLED)
         self.assertEqual(TravelBlock.objects.count(), 0)
+        self.assertEqual(Appointment.objects.count(), 1)
+        cancels = [m for m in mail.outbox if "METHOD:CANCEL" in m.attachments[0][1]]
+        self.assertEqual(len(cancels), 1)
+        body = cancels[0].attachments[0][1]
+        self.assertIn("STATUS:CANCELLED", body)
+        self.assertIn(f"UID:{uid}", body)
 
 
 class RecomputeTests(TestCase):
