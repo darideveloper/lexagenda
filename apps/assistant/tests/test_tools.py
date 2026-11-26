@@ -87,6 +87,8 @@ class ToolTests(TestCase):
                 "plan_visit",
                 "deadline_create",
                 "file_document",
+                "client_create",
+                "client_update",
                 "confirm",
                 "cancel",
                 "undo",

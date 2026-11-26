@@ -16,7 +16,7 @@ from apps.agenda import planner
 from apps.agenda.models import Appointment, Deadline
 from apps.assistant import envelope
 from apps.assistant.envelope import ProposalError, format_day, format_when, parse_when, propose
-from apps.core.models import Case, Client
+from apps.core.models import Case, Client, jid_for_phone
 from apps.docs import filing
 from apps.docs import search as docs_search
 from apps.docs.models import InboundMedia
@@ -458,6 +458,80 @@ def file_document(thread, **args):
     return {"proposal_id": proposal.pk, "summary": proposal.summary}
 
 
+def client_create(thread, **args):
+    """Propose a new client from a typed number: nothing is written until it is confirmed."""
+    if bad := _reject_extra(args, {"name", "phone", "wa_name"}):
+        return bad
+    name = (args.get("name") or "").strip()
+    if not name:
+        return {"error": "necesito el nombre del cliente"}
+    return _propose_client(
+        thread,
+        name=name,
+        phone=(args.get("phone") or "").strip(),
+        wa_name=(args.get("wa_name") or "").strip(),
+    )
+
+
+def client_create_from_contact(thread, name, phone):
+    """A forwarded contact card lands on the same card as a typed number (PLAN §6.2)."""
+    name = " ".join(str(name or "").split())
+    if not name:
+        return {"error": "la tarjeta no trae nombre; dime cómo se llama"}
+    return _propose_client(thread, name=name, phone=phone, wa_name=name)
+
+
+def _propose_client(thread, *, name, phone, wa_name):
+    try:
+        jid = jid_for_phone(phone)
+    except ValueError:
+        return {"error": "ese no es un número de WhatsApp; dime el número con lada"}
+    existing = Client.objects.filter(Q(jid=jid) | Q(phone=phone)).first()
+    if existing is not None:
+        return {"error": f"ya está en la agenda: «{existing.name}»"}
+
+    lines = [f"Nuevo cliente: «{name}»", f"WhatsApp: {phone}"]
+    if wa_name:
+        lines.append(f"En WhatsApp aparece como «{wa_name}»")
+    lines.append("¿Lo doy de alta?")
+    proposal = propose(
+        thread,
+        steps=[
+            {
+                "tool": "client_create",
+                "args": {"name": name, "phone": phone, "jid": jid, "wa_name": wa_name},
+            }
+        ],
+        summary="\n".join(lines),
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
+def client_update(thread, **args):
+    """Draft one client message: the text shown is the text sent, byte for byte (§6.3)."""
+    if bad := _reject_extra(args, {"client_id", "text"}):
+        return bad
+    client = Client.objects.filter(pk=args.get("client_id"), is_active=True).first()
+    if client is None:
+        return {"error": f"no existe el cliente {args.get('client_id')}"}
+    text = (args.get("text") or "").strip()
+    if not text:
+        return {"error": "necesito el texto del aviso"}
+    if not client.jid:
+        return {"error": f"«{client.name}» no tiene WhatsApp en la agenda"}
+
+    summary = "\n".join(
+        [f"Aviso para «{client.name}»:", text, "", "Se manda tal cual desde tu número. ¿Lo mando?"]
+    )
+    proposal = propose(
+        thread,
+        steps=[{"tool": "client_update", "args": {"client_id": client.pk}}],
+        summary=summary,
+        outbound_text=text,
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
 def _kind_defaults(kind):
     spec = (settings.CONFIG.get("kinds") or {}).get(kind) or {}
     return int(spec.get("duration", 60)), int(spec.get("buffer", 0))
@@ -661,6 +735,33 @@ TOOLS = {
             "additionalProperties": False,
         },
     },
+    "client_create": {
+        "fn": client_create,
+        "description": "Propone dar de alta un cliente; dice cómo aparece en WhatsApp.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "phone": {"type": "string", "description": "con lada, como lo dictó"},
+                "wa_name": {"type": "string", "description": "el nombre que muestra WhatsApp"},
+            },
+            "required": ["name", "phone"],
+            "additionalProperties": False,
+        },
+    },
+    "client_update": {
+        "fn": client_update,
+        "description": "Propone un aviso para un cliente; el texto se manda tal cual.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "client_id": {"type": "integer"},
+                "text": {"type": "string", "description": "el mensaje exacto, como lo verá el cliente"},
+            },
+            "required": ["client_id", "text"],
+            "additionalProperties": False,
+        },
+    },
     "confirm": {
         "fn": confirm,
         "description": "Aplica la propuesta abierta que el abogado acaba de aceptar. Solo lleva su id.",
@@ -695,7 +796,12 @@ TOOLS = {
 
 
 # `confirm` applies stored steps through this table; the docs app owns its own write.
-envelope.APPLIERS["file_document"] = filing.apply_file_document
+def _apply_file_document(args, proposal=None):
+    """`confirm` hands every applier the proposal; filing only reads its own args."""
+    return filing.apply_file_document(args)
+
+
+envelope.APPLIERS["file_document"] = _apply_file_document
 
 
 def schemas():

@@ -66,7 +66,7 @@ def confirm(thread, proposal_id):
                     applier = APPLIERS.get(step.get("tool"))
                     if applier is None:
                         raise ProposalError(f"paso desconocido: {step.get('tool')}")
-                    result, undo_steps, text = applier(step.get("args") or {})
+                    result, undo_steps, text = applier(step.get("args") or {}, proposal)
                     inverse.extend(undo_steps)
                     texts.append(text)
         except (ProposalError, ObjectDoesNotExist, KeyError, TypeError, ValueError) as exc:
@@ -129,7 +129,7 @@ def undo(thread, proposal_id):
                     applier = APPLIERS.get(step.get("tool"))
                     if applier is None:
                         raise ProposalError(f"paso desconocido: {step.get('tool')}")
-                    _, _, text = applier(step.get("args") or {})
+                    _, _, text = applier(step.get("args") or {}, compensation)
                     texts.append(text)
         except (ProposalError, ObjectDoesNotExist, KeyError, TypeError, ValueError) as exc:
             compensation.status = Proposal.FAILED
@@ -147,7 +147,7 @@ def undo(thread, proposal_id):
 # --- appliers: the only code that mutates during a commit -------------------
 
 
-def _apply_appointment_create(args):
+def _apply_appointment_create(args, proposal=None):
     from apps.agenda import services
     from apps.agenda.models import Appointment
 
@@ -171,7 +171,7 @@ def _apply_appointment_create(args):
     )
 
 
-def _apply_appointment_cancel(args):
+def _apply_appointment_cancel(args, proposal=None):
     """The create's compensation: cancel, never delete — the mailed UID must get its CANCEL."""
     from apps.agenda import services
     from apps.agenda.models import Appointment
@@ -181,7 +181,7 @@ def _apply_appointment_cancel(args):
     return {"cancelled": appointment.pk}, [], "Quité la cita que había creado."
 
 
-def _apply_reschedule(args):
+def _apply_reschedule(args, proposal=None):
     from apps.agenda import planner, services
     from apps.agenda.models import Appointment
 
@@ -202,7 +202,7 @@ def _apply_reschedule(args):
     )
 
 
-def _apply_plan_visit(args):
+def _apply_plan_visit(args, proposal=None):
     from apps.agenda import planner, services
     from apps.agenda.models import Appointment
 
@@ -251,7 +251,7 @@ def _local_clock(moment):
     return timezone.localtime(moment).strftime("%H:%M")
 
 
-def _apply_deadline_create(args):
+def _apply_deadline_create(args, proposal=None):
     from apps.agenda.models import Deadline
 
     # Deadline.save() computes due_date from the term with the applicable calendar union.
@@ -271,11 +271,36 @@ def _apply_deadline_create(args):
     )
 
 
-def _apply_deadline_delete(args):
+def _apply_deadline_delete(args, proposal=None):
     from apps.agenda.models import Deadline
 
     Deadline.objects.filter(pk=args["deadline_id"]).delete()
     return {"deleted": args["deadline_id"]}, [], "Quité el plazo que había apuntado."
+
+
+def _apply_client_create(args, proposal=None):
+    from apps.core.models import Client
+
+    client = Client.objects.create(
+        name=args["name"],
+        phone=args["phone"],
+        jid=args["jid"],
+        wa_name=args.get("wa_name") or "",
+    )
+    text = f"Listo: dí de alta a «{client.name}» con el número {client.phone}."
+    # A fresh client has no cases yet, so there is nothing to delete back.
+    return {"client_id": client.pk}, [], text
+
+
+def _apply_client_update(args, proposal=None):
+    from apps.channel.gowa import DeliveryRefused, deliver
+    from apps.core.models import Client
+
+    client = Client.objects.get(pk=args["client_id"])
+    try:
+        return deliver(proposal, client.jid)
+    except DeliveryRefused as exc:
+        raise ProposalError(str(exc)) from exc
 
 
 APPLIERS = {
@@ -285,6 +310,8 @@ APPLIERS = {
     "plan_visit": _apply_plan_visit,
     "deadline_create": _apply_deadline_create,
     "deadline_delete": _apply_deadline_delete,
+    "client_create": _apply_client_create,
+    "client_update": _apply_client_update,
 }
 
 WEEKDAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]

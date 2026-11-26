@@ -31,10 +31,30 @@ class BaseLocation(TimeStamped):
         return self.label
 
 
+JID_SUFFIX = "@s.whatsapp.net"
+LOCAL_COUNTRY = "52"
+
+
+def jid_for_phone(phone):
+    """The WhatsApp JID of a typed number: digits, plus the country code when it is local.
+
+    Ten digits is a Mexican number as the lawyer types it; anything else must already
+    carry its country code. Anything that is not 10–15 digits is not a WhatsApp number.
+    """
+    number = "".join(ch for ch in str(phone or "") if ch.isdigit())
+    if len(number) == 10:
+        number = LOCAL_COUNTRY + number
+    if not 10 <= len(number) <= 15:
+        raise ValueError(f"not a phone number: {phone!r}")
+    return number + JID_SUFFIX
+
+
 class Client(TimeStamped):
     name = models.CharField(max_length=160)
     phone = models.CharField(max_length=24, unique=True)
     jid = models.CharField(max_length=64)
+    # The name WhatsApp shows for the number, read from a forwarded contact card.
+    wa_name = models.CharField(max_length=120, blank=True)
     email = models.EmailField(blank=True)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)

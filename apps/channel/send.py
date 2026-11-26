@@ -4,9 +4,17 @@ import urllib.request
 
 from django.conf import settings
 
+from config.loader import load_config
+
 
 class SendError(RuntimeError):
     pass
+
+
+def delivery_mode():
+    """`delivery_mode` as the file says it now: flipping auto↔draft needs no restart (§6.3)."""
+    load_config.cache_clear()
+    return load_config(settings.CONFIG_PATH).get("delivery_mode") or "auto"
 
 
 def send_text(jid, text, device=None):

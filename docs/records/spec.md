@@ -122,3 +122,14 @@ al confirmar: `apps/agenda/planner.py` deja un bloque de traslado de `starts_at 
 travel_min` a `starts_at - buffer_min` para cada visita con coordenadas, y sin coordenadas la
 visita queda con `travel_min=0`, sin bloque y con un «sin dirección» en el brief. Mover la cita,
 cambiar su dirección o el brief de las 08:00 recalculan el bloque.
+
+## Avisos al cliente
+
+`client_update` guarda el texto exacto del aviso y al confirmar lo manda byte por byte desde el
+número del abogado (device B), nunca desde el de control, y sólo a un JID que ya esté en la
+agenda: cualquier otro número se rechaza con una frase. Cada envío deja una fila en `SendLog`
+con el texto, y las caps —20 por hora, 60 al día, 2 s entre mensajes— cuentan esas filas y
+contestan en español cuando ya no dejan salir. `delivery_mode` se lee de `config.yaml` en cada
+envío, así que `draft` convierte la confirmación en un borrador sin reiniciar nada. `client_create`
+no escribe nada hasta confirmar la tarjeta, que muestra el nombre con el que aparece en WhatsApp;
+una tarjeta de contacto reenviada llega a la misma propuesta.

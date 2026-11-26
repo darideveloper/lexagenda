@@ -77,7 +77,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "/login/"
 
 # Read once at boot; a broken file must stop the container, not fail silently.
-CONFIG = load_config(os.environ.get("LEXAGENDA_CONFIG", BASE_DIR / "config.yaml"))
+CONFIG_PATH = os.environ.get("LEXAGENDA_CONFIG", BASE_DIR / "config.yaml")
+CONFIG = load_config(CONFIG_PATH)
 
 # The lawyer's WhatsApp identity and the webhook secret (secrets stay in env).
 LAWYER_JID = os.environ.get("LAWYER_JID", "")
@@ -98,6 +99,8 @@ DEFAULT_FROM_EMAIL = os.environ.get("EMAIL_FROM", "lexagenda@localhost")
 GOWA_URL = os.environ.get("GOWA_URL", "http://gowa:3000")
 GOWA_BASIC_AUTH = os.environ.get("GOWA_BASIC_AUTH", "")
 GOWA_DEVICE_A = os.environ.get("GOWA_DEVICE_A", "")
+# Session B is the lawyer's own number: every client message leaves from it, never from A.
+GOWA_DEVICE_B = os.environ.get("GOWA_DEVICE_B", "")
 
 # Routes API: one traffic-aware call per leg, cached and capped (PLAN §8.2, §16).
 ROUTES_URL = os.environ.get("ROUTES_URL", "https://routes.googleapis.com")
