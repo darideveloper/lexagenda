@@ -1,0 +1,4 @@
+Agenda: {{ appointment.title }}
+{{ starts_at|date:"l j \d\e F, H:i" }}{% if appointment.address %} · {{ appointment.address }}{% endif %}
+
+Va adjunto el evento. Si ya lo tenías, se actualiza con este mismo correo; no se duplica.

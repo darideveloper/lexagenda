@@ -148,10 +148,11 @@ def undo(thread, proposal_id):
 
 
 def _apply_appointment_create(args):
+    from apps.agenda import services
     from apps.agenda.models import Appointment
 
     starts_at = parse_when(args["starts_at"])
-    appointment = Appointment.objects.create(
+    appointment = services.create(
         title=args["title"],
         kind=args.get("kind") or Appointment.VISITA,
         starts_at=starts_at,
@@ -178,13 +179,12 @@ def _apply_appointment_delete(args):
 
 
 def _apply_reschedule(args):
+    from apps.agenda import services
     from apps.agenda.models import Appointment
 
     appointment = Appointment.objects.get(pk=args["appointment_id"])
     previous = appointment.starts_at
-    appointment.starts_at = parse_when(args["new_start"])
-    appointment.ics_sequence += 1
-    appointment.save(update_fields=["starts_at", "ics_sequence", "updated_at"])
+    services.reschedule(appointment, parse_when(args["new_start"]))
     text = f"Listo: moví «{appointment.title}» al {format_when(appointment.starts_at)}."
     return (
         {"appointment_id": appointment.pk, "starts_at": appointment.starts_at.isoformat()},

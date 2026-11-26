@@ -1,0 +1,4 @@
+Cancelada: {{ appointment.title }}
+{{ starts_at|date:"l j \d\e F, H:i" }}
+
+El adjunto cancela el evento de tu calendario con el mismo identificador que la invitación.

@@ -76,6 +76,19 @@ aritmética («20 días hábiles desde notificación 30 oct»); `POST /plazos/<i
 `verified_by`, `verified_at` y `verified_with_calendar` sin borrar la etiqueta, y un plazo
 verificado con otra versión muestra «calendario actualizado — re-verifica». `manage.py sweep`
 pasa a `missed` los plazos `open` con `due_date` anterior a hoy.
+## Calendar mirror
+
+`apps/agenda/services.py` es el único que mueve `ics_sequence`: crear, mover, cancelar o
+cambiar la dirección sube exactamente uno y manda un correo con el `.ics` adjunto (`REQUEST`, o
+`CANCEL` con `STATUS:CANCELLED` al cancelar) al abogado; un recálculo de traslados no toca ni la
+secuencia ni el correo, y una operación sin cambio real tampoco. El `UID` es
+`appointment.ics_uid`, así que un cambio actualiza el evento en lugar de duplicarlo, y el correo
+del cliente nunca es destinatario. Los eventos son los tres de PLAN §7.2: cita con `LOCATION` y
+`TRANSP:OPAQUE`, traslado `Traslado → <destino>` transparente y plazo de día completo con
+avisos a 7/3/1 días y «calculado — verifica». `GET /calendar/<ICS_TOKEN>.ics` sirve citas no
+canceladas, sus traslados y los plazos abiertos con CRLF y plegado a 75 octetos, responde 404 a
+cualquier otro token (y a todos si `ICS_TOKEN` está vacío) y manda `X-Robots-Tag: noindex`; el
+token se lee en cada petición, así que rotarlo invalida la URL anterior al instante.
 ## Dashboard
 
 `/clients/`, `/clients/<id>` y `/cases/<id>` piden sesión con TOTP y leen los modelos reales;
