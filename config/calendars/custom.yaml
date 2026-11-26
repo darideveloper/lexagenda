@@ -1,0 +1,8 @@
+# Instance calendars: local closures and one-off decrees (e.g. Circular 03/2026
+# declaring 18 August inhábil). Empty by default; each date added here needs its source.
+name: custom
+label: Cierres y acuerdos de la instancia
+version: "2026.1"
+source: https://www.pjhidalgo.gob.mx/Circulares/
+days: []
+vacations: []

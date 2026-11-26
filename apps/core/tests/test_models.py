@@ -5,15 +5,16 @@ from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from apps.agenda.models import Appointment
+from apps.agenda.models import Appointment, Deadline
 from apps.assistant.models import AuditLog, Job, Message, Thread
 from apps.core.models import BaseLocation, Case, Client
 
-EIGHT = {
+DOMAIN = {
     "BaseLocation",
     "Client",
     "Case",
     "Appointment",
+    "Deadline",
     "Thread",
     "Message",
     "Job",
@@ -22,13 +23,13 @@ EIGHT = {
 
 
 class ModelSetTests(TestCase):
-    def test_exactly_eight_domain_models(self):
+    def test_exactly_the_domain_models(self):
         found = {
             m.__name__
             for m in apps.get_models()
             if m._meta.app_label in {"core", "agenda", "assistant"}
         }
-        self.assertEqual(found, EIGHT)
+        self.assertEqual(found, DOMAIN)
 
     def test_no_missing_migrations(self):
         call_command("makemigrations", "--check", "--dry-run", verbosity=0)

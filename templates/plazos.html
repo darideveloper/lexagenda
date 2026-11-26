@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Plazos · {{ instance_name }}</title></head>
+<body>
+  <h1>Plazos</h1>
+  {% if rows %}
+    <ul>
+      {% for row in rows %}
+        <li>
+          <strong>{{ row.deadline.due_date|date:"j M Y" }}</strong>
+          {{ row.deadline.title }} · {{ row.deadline.case.reference }}
+          {% if row.deadline.computed %}
+            <em>calculado — verifica{% if row.deadline.notified_on %} · {{ row.deadline.term_value }} {{ row.deadline.get_term_unit_display }} desde notificación {{ row.deadline.notified_on|date:"j M" }}{% endif %}</em>
+          {% endif %}
+          {% if row.stale %}
+            <strong>calendario actualizado — re-verifica</strong>
+          {% elif row.deadline.verified_at %}
+            <em>verificado el {{ row.deadline.verified_at|date:"j M Y" }} · calendario {{ row.deadline.verified_with_calendar }}</em>
+          {% endif %}
+          <form method="post" action="{% url 'plazos_verify' row.deadline.pk %}">
+            {% csrf_token %}<button type="submit">Marcar como verificado</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Sin plazos abiertos.</p>
+  {% endif %}
+  <p><a href="{% url 'agenda' %}">Hoy</a></p>
+</body>
+</html>

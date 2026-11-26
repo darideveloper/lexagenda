@@ -1,0 +1,50 @@
+# Poder Judicial del Estado de Hidalgo, Circular 01/2026. Seeded by hand from the
+# PDF: its OCR is unreliable, so every date is typed, not extracted.
+name: hidalgo
+label: Poder Judicial del Estado de Hidalgo (Circular 01/2026)
+version: "2026.1"
+source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+days:
+  - date: 2026-02-02
+    name: Primer lunes de febrero
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - date: 2026-03-16
+    name: Tercer lunes de marzo
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - date: 2026-04-02
+    name: Jueves Santo
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - date: 2026-04-03
+    name: Viernes Santo
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - date: 2026-05-01
+    name: Día del Trabajo
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - date: 2026-09-16
+    name: Día de la Independencia
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - date: 2026-11-02
+    name: Día de Muertos
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - date: 2026-11-16
+    name: Tercer lunes de noviembre
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+vacations:
+  - from: 2026-07-16
+    to: 2026-07-31
+    name: Periodo vacacional de verano
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:
+  - from: 2026-12-17
+    to: 2027-01-08
+    name: Periodo vacacional de invierno
+    source: https://www.pjhidalgo.gob.mx/Circulares/2026/1_2026.pdf
+    verified_on:

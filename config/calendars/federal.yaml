@@ -1,0 +1,64 @@
+# Federal holidays: Ley Federal del Trabajo arts. 74 and 75.
+# The fixed days and their in-lieu Mondays. `verified_on` stays empty until a human
+# checks the date against the source on that entry.
+name: federal
+label: Federal (LFT art. 74)
+version: "2026.1"
+source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+days:
+  - date: 2026-01-01
+    name: Año Nuevo
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2026-02-02
+    name: Día de la Constitución (en su lugar, 5 de febrero)
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2026-03-16
+    name: Natalicio de Benito Juárez (en su lugar, 21 de marzo)
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2026-05-01
+    name: Día del Trabajo
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2026-09-16
+    name: Día de la Independencia
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2026-11-16
+    name: Día de la Revolución (en su lugar, 20 de noviembre)
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2026-12-25
+    name: Navidad
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2027-01-01
+    name: Año Nuevo
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2027-02-01
+    name: Día de la Constitución (en su lugar, 5 de febrero)
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2027-03-15
+    name: Natalicio de Benito Juárez (en su lugar, 21 de marzo)
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2027-05-01
+    name: Día del Trabajo
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2027-09-16
+    name: Día de la Independencia
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2027-11-15
+    name: Día de la Revolución (en su lugar, 20 de noviembre)
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:
+  - date: 2027-12-25
+    name: Navidad
+    source: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFT.pdf
+    verified_on:

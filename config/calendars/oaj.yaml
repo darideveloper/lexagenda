@@ -1,0 +1,108 @@
+# Días inhábiles del Órgano de Administración Judicial (antes CJF).
+# 5 de febrero and 20 de noviembre are "inhábil pero laborable": the offices open,
+# the term still does not run. `verified_on` stays empty until a human checks it.
+name: oaj
+label: Órgano de Administración Judicial
+version: "2026.1"
+source: https://www.oaj.gob.mx/
+days:
+  - date: 2026-01-01
+    name: Año Nuevo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-02-02
+    name: Primer lunes de febrero
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-02-05
+    name: Día de la Constitución (inhábil pero laborable)
+    source: https://www.oaj.gob.mx/
+    verified_on:
+    laborable: true
+  - date: 2026-03-16
+    name: Tercer lunes de marzo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-04-02
+    name: Jueves Santo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-04-03
+    name: Viernes Santo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-05-01
+    name: Día del Trabajo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-09-16
+    name: Día de la Independencia
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-11-02
+    name: Día de Muertos
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-11-16
+    name: Tercer lunes de noviembre
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2026-11-20
+    name: Día de la Revolución (inhábil pero laborable)
+    source: https://www.oaj.gob.mx/
+    verified_on:
+    laborable: true
+  - date: 2026-12-25
+    name: Navidad
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-01-01
+    name: Año Nuevo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-02-01
+    name: Primer lunes de febrero
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-02-05
+    name: Día de la Constitución (inhábil pero laborable)
+    source: https://www.oaj.gob.mx/
+    verified_on:
+    laborable: true
+  - date: 2027-03-15
+    name: Tercer lunes de marzo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-03-25
+    name: Jueves Santo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-03-26
+    name: Viernes Santo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-05-01
+    name: Día del Trabajo
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-09-16
+    name: Día de la Independencia
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-11-02
+    name: Día de Muertos
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-11-15
+    name: Tercer lunes de noviembre
+    source: https://www.oaj.gob.mx/
+    verified_on:
+  - date: 2027-11-20
+    name: Día de la Revolución (inhábil pero laborable)
+    source: https://www.oaj.gob.mx/
+    verified_on:
+    laborable: true
+  - date: 2027-12-25
+    name: Navidad
+    source: https://www.oaj.gob.mx/
+    verified_on:
