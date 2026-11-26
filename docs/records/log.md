@@ -11,3 +11,6 @@ Shipped: `BaseLocation` as the day's origin, per-leg traffic-aware routes with a
 
 ## proposals — 2026-11-26
 Shipped: the proposal envelope (one open, supersede, 12-hour expiry), id-only confirm/cancel/undo under a row lock with `raw_words`, `reschedule`, `appointment_create` and `deadline_create` on the real calendars, and the fallback router with 20+20 canaries; 183 tests green, surface `local — prod unproven`.
+
+## dashboard — 2026-11-26
+Shipped: clients and cases pages behind TOTP with a whitelisted edit surface, the staff ops console (messages, audit, proposals, jobs, retry, audited 2FA reset), and dead-man pings from `work`, `sweep` and `brief`; 212 tests green, surface `local — prod unproven`.
