@@ -179,12 +179,13 @@ def _apply_appointment_delete(args):
 
 
 def _apply_reschedule(args):
-    from apps.agenda import services
+    from apps.agenda import planner, services
     from apps.agenda.models import Appointment
 
     appointment = Appointment.objects.get(pk=args["appointment_id"])
     previous = appointment.starts_at
     services.reschedule(appointment, parse_when(args["new_start"]))
+    planner.recompute(appointment)
     text = f"Listo: moví «{appointment.title}» al {format_when(appointment.starts_at)}."
     return (
         {"appointment_id": appointment.pk, "starts_at": appointment.starts_at.isoformat()},
@@ -196,6 +197,55 @@ def _apply_reschedule(args):
         ],
         text,
     )
+
+
+def _apply_plan_visit(args):
+    from apps.agenda import planner, services
+    from apps.agenda.models import Appointment
+
+    starts_at = parse_when(args["starts_at"])
+    appointment = services.create(
+        title=args["title"],
+        kind=args.get("kind") or Appointment.VISITA,
+        starts_at=starts_at,
+        duration_min=int(args.get("duration_min") or 60),
+        buffer_min=int(args.get("buffer_min") or 0),
+        location_name=args.get("location_name") or "",
+        address=args.get("address") or "",
+        address_source=args.get("address_source") or Appointment.NONE,
+        lat=args.get("lat"),
+        lng=args.get("lng"),
+        travel_min=int(args.get("travel_min") or 0),
+        case_id=args.get("case_id") or None,
+        client_id=args.get("client_id") or None,
+    )
+    # The block was shown in the proposal: write it as read, never a second route.
+    block = planner.compute_block(
+        appointment,
+        origin=args.get("origin") or None,
+        travel_min=int(args.get("travel_min") or 0),
+        summary=args.get("route_summary") or {},
+    )
+    if block is None:
+        text = (
+            f"Listo: agendé «{appointment.title}» el {format_when(starts_at)}. "
+            "Sin dirección verificada: no hay bloque de traslado."
+        )
+    else:
+        text = (
+            f"Listo: agendé «{appointment.title}» el {format_when(starts_at)}. "
+            f"Sales a las {_local_clock(block.starts_at)} "
+            f"({block.duration_min} min de traslado)."
+        )
+    return (
+        {"appointment_id": appointment.pk},
+        [{"tool": "appointment_delete", "args": {"appointment_id": appointment.pk}}],
+        text,
+    )
+
+
+def _local_clock(moment):
+    return timezone.localtime(moment).strftime("%H:%M")
 
 
 def _apply_deadline_create(args):
@@ -229,6 +279,7 @@ APPLIERS = {
     "appointment_create": _apply_appointment_create,
     "appointment_delete": _apply_appointment_delete,
     "reschedule": _apply_reschedule,
+    "plan_visit": _apply_plan_visit,
     "deadline_create": _apply_deadline_create,
     "deadline_delete": _apply_deadline_delete,
 }

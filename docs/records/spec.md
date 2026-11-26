@@ -110,3 +110,13 @@ con realce por `pg_trgm` sobre expediente y cliente; el disparador mantiene el `
 GIN lo indexa. `sweep` purga a los 90 días el media entrante sin archivar y sólo borra un blob
 cuando ningún `Document` activo ni `InboundMedia` sin purgar lo referencia; el panel avisa al
 80 % de los 500 MB.
+
+## Visitas
+
+`plan_visit` resuelve la dirección del abogado con una sola búsqueda de Places —una ficha, o un
+enlace de Maps con `address_source=link` y sin coordenadas, nunca un pin adivinado— y reutiliza
+la última cita ya resuelta del cliente antes de gastar esa búsqueda. La propuesta solo se escribe
+al confirmar: `apps/agenda/planner.py` deja un bloque de traslado de `starts_at - buffer_min -
+travel_min` a `starts_at - buffer_min` para cada visita con coordenadas, y sin coordenadas la
+visita queda con `travel_min=0`, sin bloque y con un «sin dirección» en el brief. Mover la cita,
+cambiar su dirección o el brief de las 08:00 recalculan el bloque.

@@ -38,6 +38,34 @@ class AppointmentTests(TestCase):
         second = Appointment.objects.create(title="B", starts_at=when)
         self.assertNotEqual(first.ics_uid, second.ics_uid)
 
+    def test_a_visit_keeps_its_places_card_and_never_a_guessed_pin(self):
+        appt = Appointment.objects.create(
+            title="Visita",
+            starts_at=timezone.now(),
+            location_name="Centro Médico Roma",
+            address="Av. Roma 12, Col. Roma",
+            address_source=Appointment.PLACES,
+            lat="19.416667",
+            lng="-99.162001",
+            buffer_min=8,
+        )
+
+        self.assertEqual(appt.address_source, Appointment.PLACES)
+        self.assertEqual(str(appt.lat), "19.416667")
+        self.assertIsNone(appt.travel_min)
+
+    def test_a_link_card_carries_the_address_and_no_coordinates(self):
+        appt = Appointment.objects.create(
+            title="Visita",
+            starts_at=timezone.now(),
+            address="frente al Soriana",
+            address_source=Appointment.LINK,
+        )
+
+        self.assertEqual(appt.address_source, Appointment.LINK)
+        self.assertIsNone(appt.lat)
+        self.assertIsNone(appt.lng)
+
 
 class DeadlineTests(TestCase):
     def setUp(self):

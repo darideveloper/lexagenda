@@ -6,7 +6,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from apps.agenda.models import Appointment
+from apps.agenda.models import Appointment, TravelBlock
 from apps.assistant import brief
 from apps.core.models import BaseLocation
 
@@ -132,3 +132,41 @@ class BriefTests(TestCase):
     def test_an_unknown_kind_is_refused(self):
         with self.assertRaises(ValueError):
             brief.render("noon", DAY)
+
+
+class BriefBlocksTests(TestCase):
+    """The brief is where traffic changes land: it regenerates the visit blocks (§7.3, §8.1)."""
+
+    def setUp(self):
+        BaseLocation.objects.create(label="Oficina", address="Allende 12", is_default=True)
+
+    @mock.patch("apps.agenda.day.maps.route")
+    def test_the_brief_leaves_one_block_per_located_visit(self, route):
+        route.return_value = leg(20)
+        located = Appointment.objects.create(
+            title="Visita",
+            address="Centro",
+            starts_at=at(DAY, 9, 30),
+            buffer_min=15,
+            duration_min=60,
+            address_source=Appointment.PLACES,
+            lat="19.416667",
+            lng="-99.162001",
+        )
+        link = Appointment.objects.create(
+            title="Junta",
+            address="frente al Soriana",
+            starts_at=at(DAY, 12, 0),
+            address_source=Appointment.LINK,
+        )
+        TravelBlock.objects.create(appointment=link, starts_at=at(DAY, 11, 0), duration_min=9)
+
+        text = brief.render("morning", DAY)
+
+        block = TravelBlock.objects.get(appointment=located)
+        self.assertEqual(block.starts_at, at(DAY, 8, 55))
+        self.assertEqual(block.duration_min, 20)
+        located.refresh_from_db()
+        self.assertEqual(located.travel_min, 20)
+        self.assertFalse(TravelBlock.objects.filter(appointment=link).exists())
+        self.assertEqual(text.count("Sin dirección"), 1)

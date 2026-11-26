@@ -84,6 +84,7 @@ class ToolTests(TestCase):
                 "llegada",
                 "appointment_create",
                 "reschedule",
+                "plan_visit",
                 "deadline_create",
                 "file_document",
                 "confirm",

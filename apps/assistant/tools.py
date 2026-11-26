@@ -12,6 +12,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 
 from apps.agenda import business_days
 from apps.agenda import day as simulation
+from apps.agenda import planner
 from apps.agenda.models import Appointment, Deadline
 from apps.assistant import envelope
 from apps.assistant.envelope import ProposalError, format_day, format_when, parse_when, propose
@@ -19,6 +20,7 @@ from apps.core.models import Case, Client
 from apps.docs import filing
 from apps.docs import search as docs_search
 from apps.docs.models import InboundMedia
+from apps.integrations import maps
 
 
 def agenda_today(thread):
@@ -242,6 +244,132 @@ def reschedule(thread, **args):
         expires_at=new_start,
     )
     return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
+def plan_visit(thread, **args):
+    """A visit as a card: one Places candidate or a Maps link, then its travel block (D19)."""
+    if bad := _reject_extra(
+        args,
+        {"title", "when", "kind", "duration_min", "address", "case_id", "client_id"},
+    ):
+        return bad
+    if not args.get("when"):
+        return {"error": "necesito la hora de la visita"}
+    kind = args.get("kind") or Appointment.VISITA
+    if kind not in dict(Appointment.KINDS):
+        return {"error": f"tipo de cita desconocido: {kind}"}
+    duration_min, buffer_min = _kind_defaults(kind)
+    if args.get("duration_min"):
+        duration_min = int(args["duration_min"])
+    try:
+        starts_at = parse_when(args["when"])
+    except ProposalError as exc:
+        return {"error": str(exc)}
+    if starts_at <= timezone.now():
+        return {"error": "esa hora ya pasó; dime a qué hora la agendo"}
+
+    case = None
+    if args.get("case_id"):
+        case = Case.objects.filter(pk=args["case_id"]).first()
+        if case is None:
+            return {"error": f"no existe el expediente {args['case_id']}"}
+    client = case.client if case else _client(args.get("client_id"))
+
+    card = _card_for(client, args.get("address"))
+    if card is None:
+        return {"error": "necesito la dirección de la visita"}
+
+    origin, travel_min, route_summary = "", 0, {}
+    located = card["lat"] is not None and card["lng"] is not None
+    if located:
+        origin, travel_min, route_summary = planner.plan_leg(
+            card["address"], starts_at, buffer_min
+        )
+
+    title = args.get("title") or (f"Visita {client.name}" if client else "Visita")
+    lines = [f"Nueva visita: «{title}»", f"{format_when(starts_at)}, {duration_min} min"]
+    if located:
+        lines.append(f"{card['location_name'] or card['address']} — {card['address']}")
+        if travel_min:
+            leave = starts_at - timedelta(minutes=buffer_min + travel_min)
+            lines.append(
+                f"Salida: {_clock(leave)} ({travel_min} min de traslado + {buffer_min} de margen)"
+            )
+        else:
+            lines.append("sin cálculo de traslado")
+    else:
+        lines.append(f"{card['address']} — sin dirección verificada")
+        lines.append(f"Mapa: {card['maps_url']}")
+        lines.append("No hay bloque de traslado: mándame la ubicación y lo calculo.")
+    lines.append("¿La agendo?")
+
+    proposal = propose(
+        thread,
+        steps=[
+            {
+                "tool": "plan_visit",
+                "args": {
+                    "title": title,
+                    "kind": kind,
+                    "starts_at": starts_at.isoformat(),
+                    "duration_min": duration_min,
+                    "buffer_min": buffer_min,
+                    "location_name": card["location_name"] or "",
+                    "address": card["address"],
+                    "address_source": card["address_source"],
+                    "lat": card["lat"],
+                    "lng": card["lng"],
+                    "origin": origin,
+                    "travel_min": travel_min,
+                    "route_summary": route_summary,
+                    "case_id": case.pk if case else None,
+                    "client_id": client.pk if client else None,
+                },
+            }
+        ],
+        summary="\n".join(lines),
+        expires_at=starts_at,
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
+def _client(client_id):
+    return Client.objects.filter(pk=client_id).first() if client_id else None
+
+
+def _card_for(client, address):
+    """The client's last resolved address first; a Places search only when there is none."""
+    wanted = (address or "").strip()
+    last = _last_resolved(client)
+    if last is not None and (not wanted or _same_place(wanted, last)):
+        return {
+            "address_source": last.address_source,
+            "address": last.address,
+            "location_name": last.location_name,
+            "lat": str(last.lat),
+            "lng": str(last.lng),
+            "maps_url": "",
+        }
+    return maps.resolve(wanted) if wanted else None
+
+
+def _last_resolved(client):
+    if client is None:
+        return None
+    return (
+        Appointment.objects.filter(client=client, lat__isnull=False, lng__isnull=False)
+        .order_by("-starts_at")
+        .first()
+    )
+
+
+def _same_place(address, appointment):
+    wanted = _normalize(address)
+    return wanted in {_normalize(appointment.address), _normalize(appointment.location_name)}
+
+
+def _normalize(text):
+    return " ".join(str(text or "").lower().split()).rstrip(".,")
 
 
 def deadline_create(thread, **args):
@@ -478,6 +606,28 @@ TOOLS = {
                 "new_start": {"type": "string", "description": "ISO 8601 en hora local"},
             },
             "required": ["appointment_id", "new_start"],
+            "additionalProperties": False,
+        },
+    },
+    "plan_visit": {
+        "fn": plan_visit,
+        "description": (
+            "Propone una visita con su ficha de dirección (una de Places o un enlace de Maps) "
+            "y su bloque de traslado; no agenda nada hasta que el abogado confirme."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "address": {"type": "string", "description": "la dirección tal como la dijo el abogado"},
+                "when": {"type": "string", "description": "ISO 8601 en hora local"},
+                "title": {"type": "string"},
+                "kind": {"type": "string", "enum": [kind for kind, _ in Appointment.KINDS]},
+                "duration_min": {"type": "integer"},
+                "location_name": {"type": "string"},
+                "case_id": {"type": "integer"},
+                "client_id": {"type": "integer"},
+            },
+            "required": ["address", "when"],
             "additionalProperties": False,
         },
     },

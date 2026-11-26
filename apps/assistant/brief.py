@@ -6,6 +6,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.agenda import day as simulation
+from apps.agenda import planner
 
 MORNING, EVENING = "morning", "evening"
 KINDS = (MORNING, EVENING)
@@ -18,6 +19,7 @@ def render(kind=MORNING, day=None):
     target = today + timedelta(days=1) if kind == EVENING else today
 
     result = simulation.simulate(target)
+    planner.recompute_day(target)
     stops = [
         _stop(index, stop, result["base"]) for index, stop in enumerate(result["stops"])
     ]

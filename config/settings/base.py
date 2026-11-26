@@ -105,6 +105,11 @@ ROUTES_API_KEY = os.environ.get("ROUTES_API_KEY", "")
 ROUTES_DAILY_CAP = int(os.environ.get("ROUTES_DAILY_CAP", "500"))
 ROUTES_TIMEOUT = 10
 
+# Places API (New): one Text Search per address, never a silent pin (PLAN D19).
+PLACES_URL = os.environ.get("PLACES_URL", "https://places.googleapis.com")
+PLACES_API_KEY = os.environ.get("PLACES_API_KEY", "")
+PLACES_TIMEOUT = 10
+
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://openrouter.ai/api/v1")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "")

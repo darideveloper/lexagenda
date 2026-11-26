@@ -97,7 +97,8 @@ def simulate(day=None):
 
     for appt in appointments:
         destination = appt.address.strip()
-        missing_address = not destination
+        # A link card has no coordinates: routing its text would be a guessed pin (D19).
+        missing_address = not destination or appt.address_source == Appointment.LINK
         travel_min, summary = 0, {}
         leg_degraded = False
         if not missing_address and origin:
@@ -146,7 +147,8 @@ def simulate(day=None):
 
         cursor = max(appt.starts_at, ready) + _minutes(appt.duration_min)
         previous = appt
-        origin = destination or origin
+        if not missing_address:
+            origin = destination
 
     _persist(appointments, legs)
 
