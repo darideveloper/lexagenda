@@ -1,0 +1,6 @@
+Buenos días. {% if count %}Hoy tienes {{ count }} compromiso{{ count|pluralize:"s" }}.{% else %}Hoy no tienes compromisos.{% endif %}{% for stop in stops %}
+{{ stop.at }}  {{ stop.kind|capfirst }} — {{ stop.title }}
+       {{ stop.depart_line }}{% endfor %}{% if conflicts %}
+
+Ojo:{% for conflict in conflicts %}
+  {{ conflict.title }} a las {{ conflict.at }} — {{ conflict.cause }} ({{ conflict.late_by }} min tarde){% endfor %}{% endif %}

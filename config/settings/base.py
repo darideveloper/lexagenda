@@ -87,6 +87,12 @@ GOWA_URL = os.environ.get("GOWA_URL", "http://gowa:3000")
 GOWA_BASIC_AUTH = os.environ.get("GOWA_BASIC_AUTH", "")
 GOWA_DEVICE_A = os.environ.get("GOWA_DEVICE_A", "")
 
+# Routes API: one traffic-aware call per leg, cached and capped (PLAN §8.2, §16).
+ROUTES_URL = os.environ.get("ROUTES_URL", "https://routes.googleapis.com")
+ROUTES_API_KEY = os.environ.get("ROUTES_API_KEY", "")
+ROUTES_DAILY_CAP = int(os.environ.get("ROUTES_DAILY_CAP", "500"))
+ROUTES_TIMEOUT = 10
+
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://openrouter.ai/api/v1")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "")

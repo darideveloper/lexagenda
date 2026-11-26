@@ -1,10 +1,13 @@
 import time
 
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django_otp.oath import TOTP
 from django_otp.plugins.otp_totp.models import TOTPDevice
+
+from apps.core.models import BaseLocation
 
 PASSWORD = "clave-admin"
 
@@ -60,3 +63,6 @@ class AdminTOTPTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("admin:login"), response["Location"])
+
+    def test_base_location_is_editable_in_the_admin(self):
+        self.assertTrue(admin.site.is_registered(BaseLocation))

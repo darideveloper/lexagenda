@@ -129,3 +129,23 @@ class Deadline(TimeStamped):
             self.due_date = computed
             self.computed = True
         super().save(*args, **kwargs)
+
+
+class TravelBlock(models.Model):
+    """The drive to one appointment: derived, persisted, regenerated (PLAN.md D17)."""
+
+    appointment = models.OneToOneField(
+        Appointment, on_delete=models.CASCADE, related_name="travel_block"
+    )
+    starts_at = models.DateTimeField()
+    duration_min = models.PositiveIntegerField(default=0)
+    route_summary = models.JSONField(default=dict, blank=True)
+    origin = models.TextField(blank=True)
+    destination = models.TextField(blank=True)
+    computed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["starts_at"]
+
+    def __str__(self):
+        return f"Traslado → {self.destination}"

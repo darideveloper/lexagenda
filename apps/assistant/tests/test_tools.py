@@ -69,9 +69,41 @@ class ToolTests(TestCase):
 
         self.assertIn("error", result)
 
-    def test_three_tools_are_exported_as_openai_schemas(self):
+    def test_the_tool_registry_is_exported_as_openai_schemas(self):
         names = [schema["function"]["name"] for schema in schemas()]
 
-        self.assertEqual(names, ["agenda_today", "case_search", "case_summary"])
+        self.assertEqual(
+            names,
+            [
+                "agenda_today",
+                "case_search",
+                "case_summary",
+                "day_simulation",
+                "find_free_slot",
+                "llegada",
+            ],
+        )
         for schema in schemas():
             self.assertEqual(schema["function"]["parameters"]["type"], "object")
+
+    def test_day_simulation_tool_walks_a_day(self):
+        today = timezone.localtime().replace(hour=9, minute=30, second=0, microsecond=0)
+        Appointment.objects.create(title="Visita", starts_at=today)
+
+        result = TOOLS["day_simulation"]["fn"](self.thread)
+
+        self.assertEqual(result["stops"][0]["title"], "Visita")
+
+    def test_find_free_slot_tool_returns_clock_times(self):
+        result = TOOLS["find_free_slot"]["fn"](
+            self.thread, duration=60, after="2026-11-26T09:00", before="2026-11-26T12:00"
+        )
+
+        self.assertEqual(result["slots"][0], "09:00")
+
+    def test_llegada_tool_says_on_time(self):
+        appt = Appointment.objects.create(title="Visita", starts_at=timezone.now())
+
+        result = TOOLS["llegada"]["fn"](self.thread, appointment_id=appt.pk)
+
+        self.assertEqual(result["late_by"], 0)

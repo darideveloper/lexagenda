@@ -1,10 +1,13 @@
 """Read tools the model may call. `fn(thread, **args)` returns compact JSON (PLAN.md §3.2)."""
 
+import datetime
 from datetime import timedelta
 
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 
+from apps.agenda import day as simulation
 from apps.agenda.models import Appointment
 from apps.core.models import Case, Client
 
@@ -78,6 +81,39 @@ def case_summary(thread, case_id):
     }
 
 
+def day_simulation(thread, date=None):
+    """The §8.2 walk for one day: departures, lateness, first three conflicts."""
+    when = parse_date(date) if date else None
+    return simulation.simulate(when)
+
+
+def find_free_slot(thread, duration, after, before):
+    """The first three gaps of `duration` minutes that fit between after and before."""
+    start = _moment(after)
+    limit = _moment(before)
+    if start is None or limit is None:
+        return {"error": "after y before deben ser fechas ISO"}
+    slots = simulation.find_free_slot(duration, start, limit)
+    return {"duration": duration, "slots": [_clock(slot) for slot in slots]}
+
+
+def llegada(thread, appointment_id, date=None):
+    """¿Llego? — the lateness of one stop and up to three slots where it would fit."""
+    when = parse_date(date) if date else None
+    return simulation.llegada(appointment_id, when)
+
+
+def _moment(value):
+    moment = parse_datetime(value) if value else None
+    if moment is not None and timezone.is_naive(moment):
+        moment = timezone.make_aware(moment)
+    return moment
+
+
+def _clock(moment):
+    return timezone.localtime(moment).strftime("%H:%M")
+
+
 TOOLS = {
     "agenda_today": {
         "fn": agenda_today,
@@ -101,6 +137,42 @@ TOOLS = {
             "type": "object",
             "properties": {"case_id": {"type": "integer"}},
             "required": ["case_id"],
+            "additionalProperties": False,
+        },
+    },
+    "day_simulation": {
+        "fn": day_simulation,
+        "description": "El día simulado: hora de salida de cada cita, traslados y choques.",
+        "parameters": {
+            "type": "object",
+            "properties": {"date": {"type": "string", "description": "YYYY-MM-DD; hoy por defecto"}},
+            "additionalProperties": False,
+        },
+    },
+    "find_free_slot": {
+        "fn": find_free_slot,
+        "description": "Los primeros huecos libres de una duración, entre dos fechas ISO.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "duration": {"type": "integer"},
+                "after": {"type": "string"},
+                "before": {"type": "string"},
+            },
+            "required": ["duration", "after", "before"],
+            "additionalProperties": False,
+        },
+    },
+    "llegada": {
+        "fn": llegada,
+        "description": "¿Llego? Minutos de retraso de una cita y hasta tres horarios donde cabe.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "appointment_id": {"type": "integer"},
+                "date": {"type": "string", "description": "YYYY-MM-DD; hoy por defecto"},
+            },
+            "required": ["appointment_id"],
             "additionalProperties": False,
         },
     },

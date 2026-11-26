@@ -77,7 +77,14 @@ class WalkingSkeletonEndToEndTests(TestCase):
         first_call = chat.call_args_list[0].kwargs
         self.assertEqual(
             [schema["function"]["name"] for schema in first_call["tools"]],
-            ["agenda_today", "case_search", "case_summary"],
+            [
+                "agenda_today",
+                "case_search",
+                "case_summary",
+                "day_simulation",
+                "find_free_slot",
+                "llegada",
+            ],
         )
         inbound.refresh_from_db()
         self.assertIsNotNone(inbound.replied_at)

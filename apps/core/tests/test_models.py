@@ -15,6 +15,7 @@ DOMAIN = {
     "Case",
     "Appointment",
     "Deadline",
+    "TravelBlock",
     "Thread",
     "Message",
     "Job",
