@@ -20,3 +20,6 @@ Shipped: content-addressed `Document`/`InboundMedia`, a 25 MB ingest cap, pdf/do
 
 ## plan-visit — 2026-11-26
 Shipped: one Places card or a Maps link (never a guessed pin), address reuse from the client's last resolved visit, `plan_visit` proposals that spend no second route, travel blocks from `starts_at - buffer - travel` to `starts_at - buffer`, and recompute on move and brief; 323 tests green, surface `local — prod unproven`.
+
+## ics — 2026-11-26
+Shipped: stable UID and one SEQUENCE service that bumps only on create, move, cancel or re-address, lawyer-only REQUEST/CANCEL invites, a tokenized read-only feed with 404/noindex, per-request rotation, byte-wise token compare, and undo that cancels the visit and clears its travel block; 326 tests green, surface `local — prod unproven`.
