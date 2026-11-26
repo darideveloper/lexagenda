@@ -428,7 +428,7 @@ Reads — flat schemas, unlimited growth, no confirmation:
 | `document_search` | `query`, `case_id?` | FTS over extracted text, returns snippets |
 | `deadline_list` | `days=30` | upcoming deadlines with `computed` flag |
 
-Writes — capped at seven, each builds a `Proposal`, none mutates:
+Writes — capped at eight, each builds a `Proposal`, none mutates:
 
 | tool | args | proposes |
 |---|---|---|
@@ -439,11 +439,12 @@ Writes — capped at seven, each builds a `Proposal`, none mutates:
 | `client_update` | `client_id` | a draft whose exact text is in the envelope |
 | `file_document` | `case_id`, `media_id?` | filing the last inbound file |
 | `note_add` | `case_id`, `body` | a case note, voice or text |
+| `client_create` | `name`, `phone` | resolve the number, show the WhatsApp name, create on confirm |
 
 Commit tools: `confirm(proposal_id)`, `cancel(proposal_id)`, `undo(proposal_id)` — never
 counted against the write cap, never carrying data.
 
-If an eighth write is proposed, it must replace one.
+If a ninth write is proposed, it must replace one.
 
 ### 5.3 The proposal (the critical path)
 
@@ -546,7 +547,8 @@ unlinks the devices and session B must be paired again — the sweep warns at da
 secret is literally `secret`, so `WEBHOOK_SECRET` is mandatory).
 
 Normalised input: `device_id`, `message_id` (wamid), `from_jid`, `timestamp`, `type`
-(`text|audio|image|document`), `text`, `media_id`, `mime`, `filename`.
+(`text|audio|image|document|contacts`), `text`, `media_id`, `mime`, `filename`,
+`contact_name`, `contact_phone`.
 
 Responsibilities, in order: verify signature → drop non-device-A → dedupe by `wamid` →
 check `from_jid` against `LAWYER_JID` → persist Message + InboundMedia + Job → return 200.
@@ -575,7 +577,8 @@ spam account, which is what gets numbers banned.
 ### 6.4 Media
 
 Inbound: gowa media download → `media/inbound/<yyyy>/<mm>/<sha256>.<ext>` → `InboundMedia`
-row, max 25 MB. Audio: ogg/opus → faster-whisper in the worker, no ffmpeg conversion needed.
+row, max 25 MB. Audio: ogg/opus → faster-whisper in the worker, no ffmpeg conversion needed;
+2-minute cap, and anything longer gets one Spanish line instead of a transcript.
 Images: stored, not OCR'd in v0.1 (a photo of a document is filed, not indexed).
 Documents: pdf/docx/xlsx/txt → text extraction → indexed. Unfiled media is purged at 90 days.
 
@@ -610,8 +613,9 @@ video, review). Neither is acceptable for a $50/mo product with a one-week setup
 
 ### 7.3 Travel blocks
 
-For each visit with coordinates, one block ending 5 min before the appointment, starting at
-`appointment.starts_at - buffer_min - travel_min`. Origin is the previous stop of the day, or
+For each visit with coordinates, one block from `starts_at - buffer_min - travel_min` to
+`starts_at - buffer_min`: travel, then the buffer, then the appointment. Origin is the
+previous stop of the day, or
 `BaseLocation` for the first. Blocks are recomputed when the appointment moves, when the
 address changes, or when the 08:00 brief runs (traffic changes). Return trips are not modelled.
 
@@ -657,7 +661,7 @@ t = day start at BaseLocation
 for appt in day.ordered:
     travel = route(prev, appt).duration_in_traffic   # prev = last stop or BaseLocation
     ready = t + travel + appt.buffer_min
-    if ready + appt.duration_min > appt.starts_at:  → late_by = ...
+    if ready > appt.starts_at:  → late_by = ready - appt.starts_at
     if late_by > 0: record conflict(late_by, cause)
     t = max(appt.starts_at, ready) + appt.duration_min
 ```
@@ -717,7 +721,7 @@ A January ritual refreshes all three from their published sources and bumps a
 
 Every computed date is rendered as:
 
-> 26 nov 2026 · calculado (20 días hábiles desde notificación 30 oct) · **verifica**
+> 02 dic 2026 · calculado (20 días hábiles desde notificación 30 oct) · **verifica**
 
 Stored `computed=True` and shown in both WhatsApp and dashboard. The dashboard has a
 one-click "marcar como verificado" that sets `verified_by`, `verified_at` and
@@ -810,7 +814,7 @@ Build: `Proposal` + `confirm`/`cancel`/`undo`, expiry in `sweep`, `reschedule`,
 - [ ] no reply before expiry → expired, nothing changed, the next proposal supersedes cleanly
 - [ ] "sí" twice → one appointment, one "ya estaba hecho"
 - [ ] `plan_visit` with "frente al Soriana" asks once, offers a link, never pins a wrong colonia
-- [ ] travel block appears 5 min before the buffer, and moves when the appointment moves
+- [ ] travel block appears travel-then-buffer before the appointment, and moves when the appointment moves
 - [ ] "deshaz lo último" restores the previous state within 24 h
 
 ### S3 — notes, voice, files, client updates (≈1.5 weeks)
@@ -922,7 +926,8 @@ Changing `delivery_mode` takes effect on the next send, with no redeploy.
 
 Nightly: `pg_dump -Fc` + `media/` tarball → Backblaze B2, `age`-encrypted, 30-day retention,
 weekly full kept 6 months. The `age` private key is held by the owner offline, never in the
-repo or the VPS. One restore drill before the pilot starts, timed and documented.
+repo or the VPS. One restore drill before the pilot starts, timed and documented: **RPO 24 h,
+RTO 4 h** — back into a scratch instance and serving data within half a working day.
 A legal product without a tested restore is a liability spreadsheet.
 
 ---
@@ -957,13 +962,13 @@ WhatsApp channel is unofficial and a number may be restricted.
 
 | item | estimate |
 |---|---|
-| VPS share (3 containers) | 4–6 € |
+| VPS share (3 containers, 2 vCPU / 4 GB for whisper) | 8–10 € |
 | LLM API (OpenRouter) | 1–4 € depending on model |
 | Routes API | 0–10 € — traffic-aware is the **Pro** SKU (5,000 free elements/mo, then $10/1,000); one call per leg |
 | Places API | 0–2 € — Essentials, 10,000 free/mo |
 | Backblaze B2 | ~1 € |
 | eSIM for the assistant number | ~5 € |
-| **total COGS** | **~15 €** → ~70% margin at $50 |
+| **total COGS** | **~19 €** → ~58% margin at $50 |
 
 Guardrail: `ROUTES_DAILY_CAP` in settings, enforced in `maps.py`; exceeding it degrades the
 brief to "sin cálculo de traslado" instead of spending.
@@ -995,7 +1000,8 @@ brief to "sin cálculo de traslado" instead of spending.
 3. **OpenRouter API key**; pick a cheap primary model and a stronger fallback from the
    catalogue and put both in env.
 4. **The lawyer's phone, once** — to link the companion device for delivery.
-5. **Coolify app** + Postgres + volume + domain; TOTP app installed for 2FA.
+5. **Coolify app** + Postgres + volume + domain, on a **2 vCPU / 4 GB** VPS (whisper `small`
+   shares the box with Postgres and gowa); TOTP app installed for 2FA.
 6. **SMTP credentials on the owner's own domain** (SPF/DKIM configured) for `.ics` invites.
 7. **healthchecks.io** project (or self-hosted) for the dead-man pings.
 8. **Test**: send one `.ics` invite to the lawyer's personal @gmail and confirm it lands.
