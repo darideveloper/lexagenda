@@ -1,7 +1,9 @@
 from datetime import timedelta
 from io import StringIO
 
+from django.core import mail
 from django.core.management import call_command
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 
@@ -38,7 +40,7 @@ class ConfirmTests(TestCase):
         self.assertIsNotNone(proposal.committed_at)
         appointment = Appointment.objects.get()
         self.assertEqual(appointment.title, "Visita García")
-        self.assertEqual(proposal.result["undo"][0]["tool"], "appointment_delete")
+        self.assertEqual(proposal.result["undo"][0]["tool"], "appointment_cancel")
         self.assertIn("agendé", result["text"])
 
     def test_double_confirm_commits_once(self):
@@ -174,17 +176,36 @@ class UndoTests(TestCase):
     def setUp(self):
         self.thread = Thread.objects.create(jid="5211@s.whatsapp.net")
 
-    def test_undo_of_a_creation_removes_the_appointment(self):
+    def test_undo_of_a_creation_cancels_the_appointment(self):
         proposal = envelope.propose(self.thread, steps=create_steps(), summary="¿La agendo?")
         TOOLS["confirm"]["fn"](self.thread, proposal_id=proposal.pk)
 
         result = TOOLS["undo"]["fn"](self.thread, proposal_id=proposal.pk)
 
         self.assertTrue(result["ok"])
-        self.assertEqual(Appointment.objects.count(), 0)
+        appointment = Appointment.objects.get()
+        self.assertEqual(appointment.status, Appointment.CANCELLED)
         proposal.refresh_from_db()
         self.assertEqual(proposal.status, Proposal.UNDONE)
         self.assertEqual(Proposal.objects.get(undo_of=proposal).status, Proposal.COMMITTED)
+
+    def test_undoing_a_creation_sends_one_cancel_for_the_same_uid(self):
+        User.objects.create(username="abogado", email="abogado@despacho.mx")
+        proposal = envelope.propose(self.thread, steps=create_steps(), summary="¿La agendo?")
+        TOOLS["confirm"]["fn"](self.thread, proposal_id=proposal.pk)
+        appointment = Appointment.objects.get()
+        mail.outbox.clear()
+
+        TOOLS["undo"]["fn"](self.thread, proposal_id=proposal.pk)
+
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.status, Appointment.CANCELLED)
+        self.assertEqual(Appointment.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        body = mail.outbox[0].attachments[0][1]
+        self.assertIn("METHOD:CANCEL", body)
+        self.assertIn("STATUS:CANCELLED", body)
+        self.assertIn(f"UID:{appointment.ics_uid}", body)
 
     def test_undo_of_a_reschedule_restores_the_previous_time(self):
         appointment = Appointment.objects.create(

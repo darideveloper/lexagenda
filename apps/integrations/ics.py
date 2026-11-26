@@ -141,7 +141,7 @@ def deadline_event(deadline):
 def feed(request, token):
     """The subscriber's snapshot: no session, one shared secret, never indexed."""
     expected = _token()
-    if not expected or not secrets.compare_digest(token, expected):
+    if not expected or not secrets.compare_digest(token.encode(), expected.encode()):
         raise Http404("calendario")
     response = HttpResponse(
         calendar(
@@ -155,7 +155,11 @@ def feed(request, token):
 
 
 def _token():
-    """Read per request: rotating ICS_TOKEN retires the old URL at once, with no deploy."""
+    """Read per request: no cached copy, so tests and workers pick up a new ICS_TOKEN at once.
+
+    A deployed rotation still needs a container restart — docker-compose's env_file freezes
+    the environment at start.
+    """
     return os.environ.get("ICS_TOKEN", "")
 
 

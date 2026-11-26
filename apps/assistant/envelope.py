@@ -166,16 +166,19 @@ def _apply_appointment_create(args):
     text = f"Listo: agendé «{appointment.title}» el {format_when(starts_at)}."
     return (
         {"appointment_id": appointment.pk},
-        [{"tool": "appointment_delete", "args": {"appointment_id": appointment.pk}}],
+        [{"tool": "appointment_cancel", "args": {"appointment_id": appointment.pk}}],
         text,
     )
 
 
-def _apply_appointment_delete(args):
+def _apply_appointment_cancel(args):
+    """The create's compensation: cancel, never delete — the mailed UID must get its CANCEL."""
+    from apps.agenda import services
     from apps.agenda.models import Appointment
 
-    Appointment.objects.filter(pk=args["appointment_id"]).delete()
-    return {"deleted": args["appointment_id"]}, [], "Quité la cita que había creado."
+    appointment = Appointment.objects.get(pk=args["appointment_id"])
+    services.cancel(appointment)
+    return {"cancelled": appointment.pk}, [], "Quité la cita que había creado."
 
 
 def _apply_reschedule(args):
@@ -277,7 +280,7 @@ def _apply_deadline_delete(args):
 
 APPLIERS = {
     "appointment_create": _apply_appointment_create,
-    "appointment_delete": _apply_appointment_delete,
+    "appointment_cancel": _apply_appointment_cancel,
     "reschedule": _apply_reschedule,
     "plan_visit": _apply_plan_visit,
     "deadline_create": _apply_deadline_create,

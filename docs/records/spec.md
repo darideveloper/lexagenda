@@ -88,7 +88,9 @@ del cliente nunca es destinatario. Los eventos son los tres de PLAN §7.2: cita 
 avisos a 7/3/1 días y «calculado — verifica». `GET /calendar/<ICS_TOKEN>.ics` sirve citas no
 canceladas, sus traslados y los plazos abiertos con CRLF y plegado a 75 octetos, responde 404 a
 cualquier otro token (y a todos si `ICS_TOKEN` está vacío) y manda `X-Robots-Tag: noindex`; el
-token se lee en cada petición, así que rotarlo invalida la URL anterior al instante.
+token se lee en cada petición, así que rotarlo invalida la URL anterior sin caché de por medio;
+en un contenedor desplegado el cambio de `ICS_TOKEN` surte efecto al reiniciarlo, porque
+`docker-compose` congela el entorno al arrancar.
 ## Dashboard
 
 `/clients/`, `/clients/<id>` y `/cases/<id>` piden sesión con TOTP y leen los modelos reales;

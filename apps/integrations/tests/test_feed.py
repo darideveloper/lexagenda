@@ -92,7 +92,7 @@ class FeedTests(TestCase):
 
 
 class RotationTests(TestCase):
-    """Rotating the token retires the old URL at once, with no deploy and no cached copy."""
+    """Rotating the token retires the old URL at once, with no cached copy."""
 
     def test_the_old_url_404s_the_moment_the_token_changes(self):
         with mock.patch.dict(os.environ, {"ICS_TOKEN": "primero"}):
@@ -100,3 +100,11 @@ class RotationTests(TestCase):
         with mock.patch.dict(os.environ, {"ICS_TOKEN": "segundo"}):
             self.assertEqual(self.client.get("/calendar/segundo.ics").status_code, 200)
             self.assertEqual(self.client.get("/calendar/primero.ics").status_code, 404)
+
+    def test_a_non_ascii_token_is_a_404_and_never_a_500(self):
+        with mock.patch.dict(os.environ, {"ICS_TOKEN": "secreto"}):
+            self.assertEqual(self.client.get("/calendar/%C3%B1.ics").status_code, 404)
+
+    def test_a_non_ascii_configured_token_still_works(self):
+        with mock.patch.dict(os.environ, {"ICS_TOKEN": "ñ"}):
+            self.assertEqual(self.client.get("/calendar/%C3%B1.ics").status_code, 200)
