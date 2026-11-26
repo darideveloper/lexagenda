@@ -81,10 +81,17 @@ class ToolTests(TestCase):
                 "day_simulation",
                 "find_free_slot",
                 "llegada",
+                "appointment_create",
+                "reschedule",
+                "deadline_create",
+                "confirm",
+                "cancel",
+                "undo",
             ],
         )
         for schema in schemas():
             self.assertEqual(schema["function"]["parameters"]["type"], "object")
+            self.assertFalse(schema["function"]["parameters"]["additionalProperties"])
 
     def test_day_simulation_tool_walks_a_day(self):
         today = timezone.localtime().replace(hour=9, minute=30, second=0, microsecond=0)

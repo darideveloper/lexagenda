@@ -1,14 +1,20 @@
-"""Read tools the model may call. `fn(thread, **args)` returns compact JSON (PLAN.md §3.2)."""
+"""Tools the model may call. `fn(thread, **args)` returns compact JSON (PLAN.md §3.2).
 
-import datetime
-from datetime import timedelta
+Reads read; writes build a Proposal; only `confirm`/`cancel`/`undo` touch the domain.
+"""
 
+from datetime import date, timedelta
+
+from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
+from apps.agenda import business_days
 from apps.agenda import day as simulation
-from apps.agenda.models import Appointment
+from apps.agenda.models import Appointment, Deadline
+from apps.assistant import envelope
+from apps.assistant.envelope import ProposalError, format_day, format_when, parse_when, propose
 from apps.core.models import Case, Client
 
 
@@ -114,6 +120,206 @@ def _clock(moment):
     return timezone.localtime(moment).strftime("%H:%M")
 
 
+def appointment_create(thread, **args):
+    allowed = {"title", "when", "kind", "duration_min", "address", "location_name", "case_id", "client_id"}
+    if bad := _reject_extra(args, allowed):
+        return bad
+    if not args.get("title") or not args.get("when"):
+        return {"error": "necesito el título y la hora de la cita"}
+    kind = args.get("kind") or Appointment.VISITA
+    if kind not in dict(Appointment.KINDS):
+        return {"error": f"tipo de cita desconocido: {kind}"}
+    duration_min, buffer_min = _kind_defaults(kind)
+    if args.get("duration_min"):
+        duration_min = int(args["duration_min"])
+    try:
+        starts_at = parse_when(args["when"])
+    except ProposalError as exc:
+        return {"error": str(exc)}
+    if starts_at <= timezone.now():
+        return {"error": "esa hora ya pasó; dime a qué hora la agendo"}
+
+    case = None
+    if args.get("case_id"):
+        case = Case.objects.filter(pk=args["case_id"]).first()
+        if case is None:
+            return {"error": f"no existe el expediente {args['case_id']}"}
+
+    location = args.get("location_name") or args.get("address") or ""
+    lines = [f"Nueva cita: «{args['title']}»", f"{format_when(starts_at)}, {duration_min} min"]
+    if location:
+        lines[1] += f" · {location}"
+    lines.append("¿La agendo?")
+    proposal = propose(
+        thread,
+        steps=[
+            {
+                "tool": "appointment_create",
+                "args": {
+                    "title": args["title"],
+                    "kind": kind,
+                    "starts_at": starts_at.isoformat(),
+                    "duration_min": duration_min,
+                    "buffer_min": buffer_min,
+                    "location_name": args.get("location_name") or "",
+                    "address": args.get("address") or "",
+                    "case_id": case.pk if case else None,
+                    "client_id": args.get("client_id") or (case.client_id if case else None),
+                },
+            }
+        ],
+        summary="\n".join(lines),
+        expires_at=starts_at,
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
+def reschedule(thread, **args):
+    if bad := _reject_extra(args, {"appointment_id", "new_start"}):
+        return bad
+    appointment = Appointment.objects.filter(pk=args.get("appointment_id")).first()
+    if appointment is None:
+        return {"error": f"no existe la cita {args.get('appointment_id')}"}
+    if appointment.status != Appointment.PLANNED:
+        return {"error": f"la cita está {appointment.get_status_display()}"}
+    try:
+        new_start = parse_when(args.get("new_start"))
+    except ProposalError as exc:
+        return {"error": str(exc)}
+    if new_start <= timezone.now():
+        return {"error": "esa hora ya pasó; dime a qué hora la muevo"}
+
+    ends_at = new_start + timedelta(minutes=appointment.duration_min)
+    collisions = (
+        Appointment.objects.filter(
+            status=Appointment.PLANNED,
+            starts_at__lt=ends_at,
+            starts_at__gte=new_start - timedelta(minutes=appointment.duration_min),
+        )
+        .exclude(pk=appointment.pk)
+        .order_by("starts_at")[:2]
+    )
+    lines = [
+        f"Mueve: «{appointment.title}»",
+        f"{format_when(appointment.starts_at)} → {format_when(new_start)}",
+    ]
+    for other in collisions:
+        lines.append(f"No cabe: «{other.title}» ({format_when(other.starts_at)})")
+    lines.append("¿La muevo?")
+    proposal = propose(
+        thread,
+        steps=[
+            {
+                "tool": "reschedule",
+                "args": {
+                    "appointment_id": appointment.pk,
+                    "new_start": new_start.isoformat(),
+                },
+            }
+        ],
+        summary="\n".join(lines),
+        expires_at=new_start,
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
+def deadline_create(thread, **args):
+    """A computed date from the notification, always labelled calculado — verifica (D12)."""
+    if bad := _reject_extra(
+        args, {"case_id", "title", "notified_on", "term_value", "term_unit", "kind"}
+    ):
+        return bad
+    case = Case.objects.filter(pk=args.get("case_id")).first()
+    if case is None:
+        return {"error": f"no existe el expediente {args.get('case_id')}"}
+    unit = args.get("term_unit")
+    if unit not in business_days.UNITS:
+        return {"error": f"unidad de plazo desconocida: {unit}"}
+    kind = args.get("kind") or Deadline.PROCESAL
+    if kind not in dict(Deadline.KINDS):
+        return {"error": f"tipo de plazo desconocido: {kind}"}
+    try:
+        notified_on = date.fromisoformat(str(args.get("notified_on")))
+        term_value = int(args.get("term_value"))
+    except (TypeError, ValueError):
+        return {"error": "necesito la fecha de notificación y el número de días"}
+    if term_value <= 0:
+        return {"error": "el plazo debe ser de al menos un día"}
+
+    due = business_days.due_date(notified_on, term_value, unit)
+    title = args.get("title") or "plazo"
+    summary = "\n".join(
+        [
+            f"Nuevo plazo: «{title}» ({case.reference})",
+            f"Vence el {format_day(due)} · calculado ({term_value} {dict(Deadline.UNITS)[unit]}"
+            f" desde notificación {format_day(notified_on)}) · verifica",
+            "¿Lo apunto?",
+        ]
+    )
+    proposal = propose(
+        thread,
+        steps=[
+            {
+                "tool": "deadline_create",
+                "args": {
+                    "case_id": case.pk,
+                    "title": title,
+                    "kind": kind,
+                    "notified_on": notified_on.isoformat(),
+                    "term_value": term_value,
+                    "term_unit": unit,
+                },
+            }
+        ],
+        summary=summary,
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
+def _kind_defaults(kind):
+    spec = (settings.CONFIG.get("kinds") or {}).get(kind) or {}
+    return int(spec.get("duration", 60)), int(spec.get("buffer", 0))
+
+
+def _reject_extra(args, allowed):
+    extra = sorted(set(args) - allowed)
+    if extra:
+        return {"error": f"no acepto {', '.join(extra)}"}
+    return None
+
+
+def confirm(thread, **args):
+    bad = _proposal_id_only(args)
+    if bad:
+        return bad
+    return envelope.confirm(thread, args["proposal_id"])
+
+
+def cancel(thread, **args):
+    bad = _proposal_id_only(args)
+    if bad:
+        return bad
+    return envelope.cancel(thread, args["proposal_id"])
+
+
+def undo(thread, **args):
+    bad = _proposal_id_only(args)
+    if bad:
+        return bad
+    return envelope.undo(thread, args["proposal_id"])
+
+
+def _proposal_id_only(args):
+    """`confirm` takes nothing but the id: the payload lives in the row, not in the model."""
+    if set(args) != {"proposal_id"}:
+        return {"error": "solo acepto proposal_id; lo que se aplica es lo que ya se mostró"}
+    try:
+        args["proposal_id"] = int(args["proposal_id"])
+    except (TypeError, ValueError):
+        return {"error": "proposal_id debe ser un número"}
+    return None
+
+
 TOOLS = {
     "agenda_today": {
         "fn": agenda_today,
@@ -173,6 +379,85 @@ TOOLS = {
                 "date": {"type": "string", "description": "YYYY-MM-DD; hoy por defecto"},
             },
             "required": ["appointment_id"],
+            "additionalProperties": False,
+        },
+    },
+    "appointment_create": {
+        "fn": appointment_create,
+        "description": "Propone una cita nueva; no la agenda hasta que el abogado confirme.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "when": {"type": "string", "description": "ISO 8601 en hora local"},
+                "kind": {"type": "string", "enum": [kind for kind, _ in Appointment.KINDS]},
+                "duration_min": {"type": "integer"},
+                "address": {"type": "string"},
+                "location_name": {"type": "string"},
+                "case_id": {"type": "integer"},
+                "client_id": {"type": "integer"},
+            },
+            "required": ["title", "when"],
+            "additionalProperties": False,
+        },
+    },
+    "reschedule": {
+        "fn": reschedule,
+        "description": "Propone mover una cita existente; muestra con qué choca.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "appointment_id": {"type": "integer"},
+                "new_start": {"type": "string", "description": "ISO 8601 en hora local"},
+            },
+            "required": ["appointment_id", "new_start"],
+            "additionalProperties": False,
+        },
+    },
+    "deadline_create": {
+        "fn": deadline_create,
+        "description": "Propone un plazo calculado desde la notificación; siempre dice verifica.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "case_id": {"type": "integer"},
+                "title": {"type": "string"},
+                "notified_on": {"type": "string", "description": "AAAA-MM-DD"},
+                "term_value": {"type": "integer"},
+                "term_unit": {"type": "string", "enum": list(business_days.UNITS)},
+                "kind": {"type": "string", "enum": [kind for kind, _ in Deadline.KINDS]},
+            },
+            "required": ["case_id", "title", "notified_on", "term_value", "term_unit"],
+            "additionalProperties": False,
+        },
+    },
+    "confirm": {
+        "fn": confirm,
+        "description": "Aplica la propuesta abierta que el abogado acaba de aceptar. Solo lleva su id.",
+        "parameters": {
+            "type": "object",
+            "properties": {"proposal_id": {"type": "integer"}},
+            "required": ["proposal_id"],
+            "additionalProperties": False,
+        },
+    },
+    "cancel": {
+        "fn": cancel,
+        "description": "Descarta la propuesta abierta sin cambiar nada. Solo lleva su id.",
+        "parameters": {
+            "type": "object",
+            "properties": {"proposal_id": {"type": "integer"}},
+            "required": ["proposal_id"],
+            "additionalProperties": False,
+        },
+    },
+    "undo": {
+        "fn": undo,
+        "description": "Deshace una propuesta ya aplicada hace menos de 24 horas. Solo lleva su id.",
+        "parameters": {
+            "type": "object",
+            "properties": {"proposal_id": {"type": "integer"}},
+            "required": ["proposal_id"],
             "additionalProperties": False,
         },
     },

@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from apps.core.models import TimeStamped
+
 
 class Thread(models.Model):
     channel = models.CharField(max_length=16, default="control")
@@ -63,6 +65,58 @@ class Job(models.Model):
 
     def __str__(self):
         return f"{self.kind} #{self.pk} {self.status}"
+
+
+class Proposal(TimeStamped):
+    """A write tool stores what it would do; only `confirm` applies it (PLAN.md §5.3, D7)."""
+
+    CHAT, BRIEF = "chat", "brief"
+    SOURCES = [(CHAT, "chat"), (BRIEF, "brief")]
+    PROPOSED, COMMITTED, CANCELLED, SUPERSEDED, EXPIRED, FAILED, UNDONE = (
+        "proposed",
+        "committed",
+        "cancelled",
+        "superseded",
+        "expired",
+        "failed",
+        "undone",
+    )
+    STATUS = [
+        (PROPOSED, "propuesta"),
+        (COMMITTED, "aplicada"),
+        (CANCELLED, "cancelada"),
+        (SUPERSEDED, "sustituida"),
+        (EXPIRED, "caducada"),
+        (FAILED, "fallida"),
+        (UNDONE, "deshecha"),
+    ]
+
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name="proposals")
+    steps = models.JSONField(default=list)
+    summary = models.TextField()
+    outbound_text = models.TextField(blank=True)
+    source = models.CharField(max_length=8, choices=SOURCES, default=CHAT)
+    status = models.CharField(max_length=10, choices=STATUS, default=PROPOSED)
+    expires_at = models.DateTimeField()
+    committed_at = models.DateTimeField(null=True, blank=True)
+    result = models.JSONField(default=dict, blank=True)
+    undo_of = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="undos"
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["thread", "status", "expires_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["thread"],
+                condition=models.Q(status="proposed"),
+                name="one_open_proposal_per_thread",
+            )
+        ]
+
+    def __str__(self):
+        return f"#{self.pk} {self.status}: {self.summary[:40]}"
 
 
 class AuditLog(models.Model):

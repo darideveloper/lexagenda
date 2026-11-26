@@ -84,6 +84,12 @@ class WalkingSkeletonEndToEndTests(TestCase):
                 "day_simulation",
                 "find_free_slot",
                 "llegada",
+                "appointment_create",
+                "reschedule",
+                "deadline_create",
+                "confirm",
+                "cancel",
+                "undo",
             ],
         )
         inbound.refresh_from_db()

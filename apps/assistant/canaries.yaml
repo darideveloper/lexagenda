@@ -1,0 +1,107 @@
+# The cheap-model gate (PLAN.md §5.6). Twenty requests must route to the named tool with its
+# required arguments; twenty replies to an open proposal must decide confirm / cancel / nothing.
+# Run against a seeded scratch instance on the real models, never against production data.
+
+route:
+  - request: "¿Qué tengo hoy?"
+    tool: agenda_today
+    args: []
+  - request: "¿Qué citas hay hoy?"
+    tool: agenda_today
+    args: []
+  - request: "Dime la agenda de hoy"
+    tool: agenda_today
+    args: []
+  - request: "Busca a García"
+    tool: case_search
+    args: [query]
+  - request: "Busca el expediente EXP-2026-1"
+    tool: case_search
+    args: [query]
+  - request: "¿Quién es Peralta?"
+    tool: case_search
+    args: [query]
+  - request: "Resumen del expediente 3"
+    tool: case_summary
+    args: [case_id]
+  - request: "¿Cómo va el caso de García?"
+    tool: case_summary
+    args: [case_id]
+  - request: "Cuéntame del expediente 2"
+    tool: case_summary
+    args: [case_id]
+  - request: "Agenda una visita el jueves a las 10"
+    tool: appointment_create
+    args: [title, when]
+  - request: "Agéndame una audiencia el viernes a las 9"
+    tool: appointment_create
+    args: [title, when]
+  - request: "Pon una junta mañana a las 5"
+    tool: appointment_create
+    args: [title, when]
+  - request: "Crea una cita el lunes a las 8:30"
+    tool: appointment_create
+    args: [title, when]
+  - request: "Mueve la cita de las 17:00 al jueves"
+    tool: reschedule
+    args: [appointment_id, new_start]
+  - request: "Cambia la visita del viernes a las 11"
+    tool: reschedule
+    args: [appointment_id, new_start]
+  - request: "Recorre la audiencia al lunes"
+    tool: reschedule
+    args: [appointment_id, new_start]
+  - request: "Pásala al martes a la misma hora"
+    tool: reschedule
+    args: [appointment_id, new_start]
+  - request: "Apunta un plazo de 20 días hábiles para el expediente 2"
+    tool: deadline_create
+    args: [case_id, title, notified_on, term_value, term_unit]
+  - request: "Se notificó ayer, da 10 días hábiles"
+    tool: deadline_create
+    args: [case_id, title, notified_on, term_value, term_unit]
+  - request: "Registra el plazo de contestación del expediente 1"
+    tool: deadline_create
+    args: [case_id, title, notified_on, term_value, term_unit]
+
+decide:
+  - request: "sí"
+    decision: confirm
+  - request: "sí, agéndala"
+    decision: confirm
+  - request: "adelante"
+    decision: confirm
+  - request: "hazlo"
+    decision: confirm
+  - request: "ok, muévela"
+    decision: confirm
+  - request: "dale"
+    decision: confirm
+  - request: "correcto"
+    decision: confirm
+  - request: "no"
+    decision: cancel
+  - request: "no la muevas"
+    decision: cancel
+  - request: "déjala así"
+    decision: cancel
+  - request: "cancela"
+    decision: cancel
+  - request: "mejor no"
+    decision: cancel
+  - request: "olvídalo"
+    decision: cancel
+  - request: "¿por qué la mueves?"
+    decision: nothing
+  - request: "¿a qué hora sería?"
+    decision: nothing
+  - request: "espera"
+    decision: nothing
+  - request: "¿choca con algo?"
+    decision: nothing
+  - request: "mañana te digo"
+    decision: nothing
+  - request: "¿y el viernes?"
+    decision: nothing
+  - request: "no entendí"
+    decision: nothing

@@ -30,6 +30,28 @@ no es staff se rechaza aunque su código sea válido.
 lectura: `agenda_today`, `case_search` y `case_summary`. Cada llamada deja una fila en
 `AuditLog`; una herramienta desconocida se audita como fallo y no impide responder.
 
+## Propuestas
+
+Una herramienta de escritura no toca la base: valida sus argumentos y guarda una `Proposal`
+(`steps`, `summary` — exactamente lo que se le mostró al abogado, `expires_at`) con estado
+`proposed`. Una segunda propuesta marca la anterior como `superseded` y lo dice en una línea; solo
+puede haber una `proposed` por hilo (restricción parcial en la base).
+
+El abogado responde en palabras y el modelo solo puede llamar `confirm(proposal_id)`,
+`cancel(proposal_id)` o `undo(proposal_id)`: ningún otro argumento se acepta, y lo que se aplica es
+lo guardado en la fila. `confirm` toma la fila con `select_for_update()` dentro de
+`transaction.atomic()`, aplica los pasos en orden, sella `committed_at` y deja en `result.undo` el
+paso inverso; una confirmación repetida contesta "Ya estaba hecho." sin volver a escribir. Una
+pregunta no confirma nada. Una propuesta caducada (`min(inicio de la cita, ahora + 12 h)`) se
+rechaza al confirmar y `manage.py sweep` la marca `expired`. `undo` aplica el paso inverso como
+propuesta compensatoria dentro de 24 h y deja la original en `undone`.
+
+Si el modelo barato no llama herramienta teniendo una propuesta abierta, devuelve JSON roto, una
+herramienta desconocida o un argumento rechazado, el bucle reintenta una vez con
+`LLM_FALLBACK_MODEL` y `AuditLog.model` guarda cuál modelo contestó. `canaries.yaml` fija las 20
+peticiones que deben enrutar a su herramienta y las 20 respuestas que deben decidir
+confirmar/cancelar/nada.
+
 ## Plazos
 
 `config/calendars/` guarda cuatro calendarios YAML: `federal`, `oaj`, `hidalgo` y `custom`.

@@ -20,6 +20,7 @@ DOMAIN = {
     "Message",
     "Job",
     "AuditLog",
+    "Proposal",
 }
 
 
