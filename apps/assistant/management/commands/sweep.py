@@ -4,6 +4,7 @@ from django.utils import timezone
 from apps.agenda.models import Deadline
 from apps.assistant.models import Proposal
 from apps.core import health
+from apps.docs import purge as docs_purge
 
 
 class Command(BaseCommand):
@@ -17,9 +18,11 @@ class Command(BaseCommand):
             expired = Proposal.objects.filter(
                 status=Proposal.PROPOSED, expires_at__lte=timezone.now()
             ).update(status=Proposal.EXPIRED)
+            purged = docs_purge.purge_inbound()
         except Exception:
             health.ping("sweep", ok=False)
             raise
         health.ping("sweep")
         self.stdout.write(f"sweep: {missed} plazo(s) vencido(s)")
         self.stdout.write(f"sweep: {expired} propuesta(s) caducada(s)")
+        self.stdout.write(f"sweep: {purged} archivo(s) entrante(s) purgado(s)")

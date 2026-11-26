@@ -98,3 +98,15 @@ es sólo para `is_staff`: muestra mensajes, auditoría, propuestas y trabajos, r
 restablece el 2FA del abogado — auditado en `AuditLog(tool=2fa_reset)` y avisado por correo. Los
 tres temporizadores (`work`, `sweep`, `brief`) hacen ping a healthchecks.io
 (`HEALTHCHECK_<NAME>_URL`) y un ping caído nunca rompe la corrida.
+
+## Documentos
+
+Un archivo reenviado por WhatsApp se guarda en `media/inbound/<año>/<mes>/<sha256>.<ext>`
+(hasta 25 MB; lo que pasa se rechaza sin crear fila); archivarlo copia el blob a
+`media/documents/<expediente>/<sha256[:2]>/<sha256>.<ext>` y crea un `Document` con el texto
+extraído de pdf/docx/xlsx/txt. Un PDF escaneado se acepta con `no_text_layer` y se muestra
+«sin texto». `document_search` y `/documents/` corren la misma consulta `ts_headline` (español)
+con realce por `pg_trgm` sobre expediente y cliente; el disparador mantiene el `tsvector` y el
+GIN lo indexa. `sweep` purga a los 90 días el media entrante sin archivar y sólo borra un blob
+cuando ningún `Document` activo ni `InboundMedia` sin purgar lo referencia; el panel avisa al
+80 % de los 500 MB.

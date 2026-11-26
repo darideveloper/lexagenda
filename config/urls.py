@@ -11,5 +11,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     re_path(r"^calendar/(?P<token>[^/]+)\.ics$", ics.feed, name="calendar_feed"),
     path("", include("apps.channel.urls")),
+    path("", include("apps.docs.urls")),
     path("", include("apps.core.urls")),
 ]

@@ -16,6 +16,9 @@ from apps.agenda.models import Appointment, Deadline
 from apps.assistant import envelope
 from apps.assistant.envelope import ProposalError, format_day, format_when, parse_when, propose
 from apps.core.models import Case, Client
+from apps.docs import filing
+from apps.docs import search as docs_search
+from apps.docs.models import InboundMedia
 
 
 def agenda_today(thread):
@@ -84,6 +87,24 @@ def case_summary(thread, case_id):
             if upcoming
             else None
         ),
+    }
+
+
+def document_search(thread, query, case_id=None):
+    """FTS over the extracted text, with a snippet; the same query the dashboard runs."""
+    rows = docs_search.search(query, case_id=case_id)
+    return {
+        "count": len(rows),
+        "results": [
+            {
+                "document_id": row["id"],
+                "filename": row["filename"],
+                "case": f"{row['case_reference']} — {row['case_title']}",
+                "snippet": row["snippet"],
+                "no_text_layer": row["no_text_layer"],
+            }
+            for row in rows
+        ],
     }
 
 
@@ -276,6 +297,39 @@ def deadline_create(thread, **args):
     return {"proposal_id": proposal.pk, "summary": proposal.summary}
 
 
+def file_document(thread, **args):
+    """Propose filing the last (or a named) inbound file under a case."""
+    if bad := _reject_extra(args, {"case_id", "media_id"}):
+        return bad
+    case = Case.objects.filter(pk=args.get("case_id")).first()
+    if case is None:
+        return {"error": f"no existe el expediente {args.get('case_id')}"}
+    available = InboundMedia.objects.filter(purged_at__isnull=True)
+    if args.get("media_id"):
+        media = available.filter(pk=args["media_id"]).first()
+        if media is None:
+            return {"error": f"no existe el archivo {args['media_id']}"}
+    else:
+        media = available.order_by("-created_at").first()
+        if media is None:
+            return {"error": "no tengo un archivo reciente para archivar"}
+    summary = "\n".join(
+        [
+            f"Archivar: «{media.filename}»",
+            f"En el expediente «{case.reference} — {case.title}»",
+            "¿Lo archivo?",
+        ]
+    )
+    proposal = propose(
+        thread,
+        steps=[
+            {"tool": "file_document", "args": {"case_id": case.pk, "media_id": media.pk}}
+        ],
+        summary=summary,
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
 def _kind_defaults(kind):
     spec = (settings.CONFIG.get("kinds") or {}).get(kind) or {}
     return int(spec.get("duration", 60)), int(spec.get("buffer", 0))
@@ -343,6 +397,19 @@ TOOLS = {
             "type": "object",
             "properties": {"case_id": {"type": "integer"}},
             "required": ["case_id"],
+            "additionalProperties": False,
+        },
+    },
+    "document_search": {
+        "fn": document_search,
+        "description": "Busca una frase en el texto de los documentos archivados; devuelve el fragmento.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "case_id": {"type": "integer"},
+            },
+            "required": ["query"],
             "additionalProperties": False,
         },
     },
@@ -431,6 +498,19 @@ TOOLS = {
             "additionalProperties": False,
         },
     },
+    "file_document": {
+        "fn": file_document,
+        "description": "Propone archivar un archivo recibido en un expediente; no lo archiva hasta confirmar.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "case_id": {"type": "integer"},
+                "media_id": {"type": "integer", "description": "el último archivo si se omite"},
+            },
+            "required": ["case_id"],
+            "additionalProperties": False,
+        },
+    },
     "confirm": {
         "fn": confirm,
         "description": "Aplica la propuesta abierta que el abogado acaba de aceptar. Solo lleva su id.",
@@ -462,6 +542,10 @@ TOOLS = {
         },
     },
 }
+
+
+# `confirm` applies stored steps through this table; the docs app owns its own write.
+envelope.APPLIERS["file_document"] = filing.apply_file_document
 
 
 def schemas():

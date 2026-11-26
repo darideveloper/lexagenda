@@ -1,0 +1,47 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Documentos · {{ instance_name }}{% endblock %}
+{% block body %}
+  <h1>Documentos</h1>
+
+  {% if cap_warning %}
+    <p class="tag">El almacén va al {{ cap_percent }}% de los 500 MB; conviene archivar y purgar.</p>
+  {% endif %}
+
+  <form method="get" action="{% url 'documents' %}">
+    <label for="q">Buscar en el texto de los documentos</label>
+    <input id="q" name="q" type="search" value="{{ query }}" placeholder="cláusula suelo, desistimiento…">
+    <button type="submit">Buscar</button>
+  </form>
+
+  {% if query %}
+    {% if results %}
+      <ul>
+        {% for row in results %}
+          <li>
+            <strong>{{ row.filename }}</strong>
+            · <a href="{% url 'case' row.case_id %}">{{ row.case_reference }} — {{ row.case_title }}</a>
+            {% if row.no_text_layer %}<span class="tag">sin texto</span>{% endif %}
+            <p>{{ row.snippet }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Sin resultados para «{{ query }}».</p>
+    {% endif %}
+  {% elif documents %}
+    <table>
+      <thead><tr><th>Archivo</th><th>Expediente</th><th>Subido</th></tr></thead>
+      <tbody>
+        {% for document in documents %}
+          <tr>
+            <td>{{ document.filename }}{% if document.no_text_layer %} <span class="tag">sin texto</span>{% endif %}</td>
+            <td><a href="{% url 'case' document.case_id %}">{{ document.case.reference }} — {{ document.case.title }}</a></td>
+            <td class="muted">{{ document.created_at|date:"j M Y" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin documentos todavía.</p>
+  {% endif %}
+{% endblock %}

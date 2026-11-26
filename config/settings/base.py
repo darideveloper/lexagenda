@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "apps.agenda",
     "apps.assistant",
     "apps.channel",
+    "apps.docs",
 ]
 
 MIDDLEWARE = [
