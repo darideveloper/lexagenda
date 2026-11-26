@@ -23,3 +23,6 @@ Shipped: one Places card or a Maps link (never a guessed pin), address reuse fro
 
 ## ics — 2026-11-26
 Shipped: stable UID and one SEQUENCE service that bumps only on create, move, cancel or re-address, lawyer-only REQUEST/CANCEL invites, a tokenized read-only feed with 404/noindex, per-request rotation, byte-wise token compare, and undo that cancels the visit and clears its travel block; 326 tests green, surface `local — prod unproven`.
+
+## client-updates — 2026-11-26
+Shipped: `client_create` from a typed number or a forwarded contact card with the WhatsApp name confirmed, `client_update` sending the stored bytes from the lawyer's device to book-only JIDs, a send log with 20/h, 60/d and 2 s caps in Spanish, and `delivery_mode: draft` read per send; 361 tests green, surface `local — prod unproven`.
