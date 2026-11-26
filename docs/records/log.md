@@ -14,3 +14,6 @@ Shipped: the proposal envelope (one open, supersede, 12-hour expiry), id-only co
 
 ## dashboard — 2026-11-26
 Shipped: clients and cases pages behind TOTP with a whitelisted edit surface, the staff ops console (messages, audit, proposals, jobs, retry, audited 2FA reset), and dead-man pings from `work`, `sweep` and `brief`; 212 tests green, surface `local — prod unproven`.
+
+## files-search — 2026-11-26
+Shipped: content-addressed `Document`/`InboundMedia`, a 25 MB ingest cap, pdf/docx/xlsx/txt extraction with "sin texto", Spanish FTS with `pg_trgm` and a GIN-backed snippet query shared by `document_search` and `/documents/`, and a 90-day purge with refcounted blob release; 291 tests green, surface `local — prod unproven`.
