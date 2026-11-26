@@ -1,0 +1,45 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+    depends_on:
+      - db
+    expose:
+      - "8000"
+    volumes:
+      - media:/app/media
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lexagenda
+      POSTGRES_USER: lexagenda
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Internal only: never published, no ports mapping.
+  gowa:
+    image: aldinokemal2104/go-whatsapp-web-multidevice:v9.11.0
+    restart: unless-stopped
+    command: ["rest", "--port=3000", "--basic-auth=${GOWA_BASIC_AUTH}"]
+    environment:
+      WHATSAPP_WEBHOOK: http://web:8000/webhooks/gowa
+      WHATSAPP_WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      WHATSAPP_WEBHOOK_EVENTS: message
+      WHATSAPP_WEBHOOK_IGNORE_JIDS: "@g.us"
+    depends_on:
+      - web
+    volumes:
+      - gowastorages:/app/storages
+      - gowastatics:/app/statics
+
+volumes:
+  media:
+  pgdata:
+  gowastorages:
+  gowastatics:

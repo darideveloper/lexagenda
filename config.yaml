@@ -1,0 +1,10 @@
+name: "Despacho de prueba"
+delivery_mode: auto
+kinds:
+  visita:    {duration: 60, buffer: 15}
+  audiencia: {duration: 90, buffer: 30}
+  juzgado:   {duration: 60, buffer: 20}
+  reunion:   {duration: 45, buffer: 10}
+  tramite:   {duration: 30, buffer: 15}
+caps: {hourly: 20, daily: 60, delay_seconds: 2}
+reminders: [7, 3, 1]

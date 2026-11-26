@@ -1,0 +1,95 @@
+import os
+from pathlib import Path
+
+import dj_database_url
+
+from config.loader import load_config
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
+DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h]
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django_otp",
+    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_static",
+    "apps.core",
+    "apps.agenda",
+    "apps.assistant",
+    "apps.channel",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+WSGI_APPLICATION = "config.wsgi.application"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+DATABASES = {
+    "default": dj_database_url.config(
+        default="postgres:///lexagenda_c1", conn_max_age=600
+    )
+}
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+]
+
+LANGUAGE_CODE = "es-mx"
+TIME_ZONE = "America/Mexico_City"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+LOGIN_URL = "/login/"
+
+# Read once at boot; a broken file must stop the container, not fail silently.
+CONFIG = load_config(os.environ.get("LEXAGENDA_CONFIG", BASE_DIR / "config.yaml"))
+
+# The lawyer's WhatsApp identity and the webhook secret (secrets stay in env).
+LAWYER_JID = os.environ.get("LAWYER_JID", "")
+ASSISTANT_NUMBER = os.environ.get("ASSISTANT_NUMBER", "")
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
+
+GOWA_URL = os.environ.get("GOWA_URL", "http://gowa:3000")
+GOWA_BASIC_AUTH = os.environ.get("GOWA_BASIC_AUTH", "")
+GOWA_DEVICE_A = os.environ.get("GOWA_DEVICE_A", "")
+
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://openrouter.ai/api/v1")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_MODEL = os.environ.get("LLM_MODEL", "")
+LLM_FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "")
+LLM_REFERER = os.environ.get("LLM_REFERER", "")
+LLM_TITLE = os.environ.get("LLM_TITLE", "lexagenda")

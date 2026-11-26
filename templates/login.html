@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Entrar · lexagenda</title></head>
+<body>
+  <h1>Entrar</h1>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <p><label>Usuario <input name="username" autocomplete="username" required autofocus></label></p>
+    <p><label>Contraseña <input name="password" type="password" autocomplete="current-password" required></label></p>
+    <p><label>Código de 6 dígitos o código de recuperación <input name="code" inputmode="numeric" autocomplete="one-time-code" required></label></p>
+    {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+    <button type="submit">Entrar</button>
+  </form>
+</body>
+</html>
