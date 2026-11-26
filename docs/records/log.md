@@ -8,3 +8,6 @@ Shipped: four official calendars seeded with a source per date, day-after start,
 
 ## day-simulation — 2026-11-26
 Shipped: `BaseLocation` as the day's origin, per-leg traffic-aware routes with a 30-minute cache and daily cap, the sequential day walk with `late_by` and causes, `find_free_slot` and ¿llego?, the morning and evening briefs with no model call, and `seed_demo`; 131 tests green, surface `local — prod unproven`.
+
+## proposals — 2026-11-26
+Shipped: the proposal envelope (one open, supersede, 12-hour expiry), id-only confirm/cancel/undo under a row lock with `raw_words`, `reschedule`, `appointment_create` and `deadline_create` on the real calendars, and the fallback router with 20+20 canaries; 183 tests green, surface `local — prod unproven`.
