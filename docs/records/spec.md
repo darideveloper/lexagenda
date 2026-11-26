@@ -101,6 +101,18 @@ restablece el 2FA del abogado — auditado en `AuditLog(tool=2fa_reset)` y avisa
 tres temporizadores (`work`, `sweep`, `brief`) hacen ping a healthchecks.io
 (`HEALTHCHECK_<NAME>_URL`) y un ping caído nunca rompe la corrida.
 
+## Voz y notas
+
+Un audio del abogado entra por el webhook como `InboundMedia` (`audio/ogg`) y el worker lo
+transcribe con faster-whisper `small` en CPU, español, con tope de dos minutos; la transcripción
+queda como una sola `Note(source=voice)` con su audio y `transcript_model`, y la respuesta es una
+línea. Un audio ilegible o pasado del tope contesta una frase en español, no deja nota y no se
+reintenta; un fallo inesperado conserva el tope de tres intentos. La nota va al expediente del
+trabajo, al último que el hilo mencionó o al único abierto, y sin expediente se pide. `note_add`
+propone la nota y solo escribe al confirmar (con deshacer dentro de 24 h); `case_notes` y
+`case_summary` devuelven voz y texto con la misma forma, que `/cases/<id>` pinta como línea de
+tiempo.
+
 ## Documentos
 
 Un archivo reenviado por WhatsApp se guarda en `media/inbound/<año>/<mes>/<sha256>.<ext>`

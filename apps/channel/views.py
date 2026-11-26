@@ -114,16 +114,19 @@ def _lawyer_media(event):
     wamid = data.get("id")
     if not wamid:
         return None
-    for kind in ("document", "image"):
+    for kind in ("audio", "document", "image"):
         ref = data.get(kind)
         if ref:
+            mime = data.get("mimetype") or data.get("mime_type") or ""
+            if kind == "audio":
+                mime = "audio/ogg"  # gowa sends voice notes as ogg/opus
             return (
                 event.get("device_id", ""),
                 wamid,
                 data.get("from", ""),
                 kind,
                 ref,
-                data.get("mimetype") or data.get("mime_type") or "",
+                mime,
                 data.get("filename") or "",
             )
     return None

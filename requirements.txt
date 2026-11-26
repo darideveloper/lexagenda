@@ -7,3 +7,4 @@ django-otp>=1.5,<2
 pypdf>=5,<6
 python-docx>=1.1,<2
 openpyxl>=3.1,<4
+faster-whisper>=1.0,<2

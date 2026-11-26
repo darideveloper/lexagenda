@@ -170,6 +170,7 @@ def case_detail(request, pk):
             "case": case,
             "form": form,
             "appointments": case.appointments.order_by("starts_at"),
+            "notes": case.notes.all(),
             "instance_name": settings.CONFIG["name"],
         },
     )

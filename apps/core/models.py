@@ -77,3 +77,31 @@ class Case(TimeStamped):
 
     def __str__(self):
         return f"{self.reference} — {self.title}"
+
+
+class Note(TimeStamped):
+    """A case note: the voice note's transcript and a typed note share this one shape (§5.2)."""
+
+    VOICE, TEXT, WHATSAPP = "voice", "text", "whatsapp"
+    SOURCES = [(VOICE, "voz"), (TEXT, "texto"), (WHATSAPP, "whatsapp")]
+
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="notes")
+    client = models.ForeignKey(
+        Client, on_delete=models.SET_NULL, null=True, blank=True, related_name="case_notes"
+    )
+    body = models.TextField()
+    source = models.CharField(max_length=10, choices=SOURCES, default=TEXT)
+    media = models.ForeignKey(
+        "docs.InboundMedia",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notes",
+    )
+    transcript_model = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.body[:40]

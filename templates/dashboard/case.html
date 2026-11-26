@@ -42,5 +42,21 @@
   {% endif %}
 
   <h2>Notas</h2>
-  <p class="muted">Las notas del expediente llegan con la captura por voz (S3).</p>
+  {% if notes %}
+    <ol class="timeline">
+      {% for note in notes %}
+        <li>
+          <p class="muted">
+            <span class="tag">{{ note.get_source_display }}</span>
+            {{ note.created_at|date:"j M Y H:i" }}
+            {% if note.media %}· audio{% endif %}
+            {% if note.transcript_model %}· transcrito con {{ note.transcript_model }}{% endif %}
+          </p>
+          <p>{{ note.body|linebreaksbr }}</p>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="muted">Sin notas todavía.</p>
+  {% endif %}
 {% endblock %}

@@ -89,7 +89,33 @@ def case_summary(thread, case_id):
             if upcoming
             else None
         ),
+        "notes": _note_shapes(case),
     }
+
+
+def case_notes(thread, case_id, limit=5):
+    """The recent notes of one case, the same rows `/cases/<id>` shows as a timeline."""
+    try:
+        case = Case.objects.get(pk=case_id)
+    except Case.DoesNotExist:
+        return {"error": f"no existe el expediente {case_id}"}
+    notes = _note_shapes(case, limit=max(1, min(int(limit or 5), 20)))
+    return {"case_id": case.pk, "reference": case.reference, "count": len(notes), "notes": notes}
+
+
+def _note_shapes(case, limit=5):
+    """One shape for a voice note and a typed note: the transcript is the body (PLAN §5.2)."""
+    return [
+        {
+            "id": note.pk,
+            "source": note.source,
+            "body": note.body,
+            "created_at": timezone.localtime(note.created_at).isoformat(),
+            "media_id": note.media_id,
+            "transcript_model": note.transcript_model or None,
+        }
+        for note in case.notes.all()[:limit]
+    ]
 
 
 def document_search(thread, query, case_id=None):
@@ -458,6 +484,33 @@ def file_document(thread, **args):
     return {"proposal_id": proposal.pk, "summary": proposal.summary}
 
 
+def note_add(thread, **args):
+    """A case note as a proposal: the note exists only after the lawyer confirms (§5.2)."""
+    if bad := _reject_extra(args, {"case_id", "body"}):
+        return bad
+    case = Case.objects.filter(pk=args.get("case_id")).first()
+    if case is None:
+        return {"error": f"no existe el expediente {args.get('case_id')}"}
+    body = (args.get("body") or "").strip()
+    if not body:
+        return {"error": "necesito el texto de la nota"}
+
+    summary = "\n".join(
+        [
+            f"Nota para «{case.reference} — {case.title}»:",
+            body,
+            "",
+            "¿La guardo?",
+        ]
+    )
+    proposal = propose(
+        thread,
+        steps=[{"tool": "note_add", "args": {"case_id": case.pk, "body": body}}],
+        summary=summary,
+    )
+    return {"proposal_id": proposal.pk, "summary": proposal.summary}
+
+
 def client_create(thread, **args):
     """Propose a new client from a typed number: nothing is written until it is confirmed."""
     if bad := _reject_extra(args, {"name", "phone", "wa_name"}):
@@ -602,6 +655,19 @@ TOOLS = {
             "additionalProperties": False,
         },
     },
+    "case_notes": {
+        "fn": case_notes,
+        "description": "Las notas recientes de un expediente: voz y texto tienen la misma forma.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "case_id": {"type": "integer"},
+                "limit": {"type": "integer", "description": "5 por defecto"},
+            },
+            "required": ["case_id"],
+            "additionalProperties": False,
+        },
+    },
     "document_search": {
         "fn": document_search,
         "description": "Busca una frase en el texto de los documentos archivados; devuelve el fragmento.",
@@ -732,6 +798,19 @@ TOOLS = {
                 "media_id": {"type": "integer", "description": "el último archivo si se omite"},
             },
             "required": ["case_id"],
+            "additionalProperties": False,
+        },
+    },
+    "note_add": {
+        "fn": note_add,
+        "description": "Propone una nota en un expediente; no la guarda hasta que el abogado confirme.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "case_id": {"type": "integer"},
+                "body": {"type": "string", "description": "el texto de la nota"},
+            },
+            "required": ["case_id", "body"],
             "additionalProperties": False,
         },
     },

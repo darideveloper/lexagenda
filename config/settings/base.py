@@ -113,6 +113,11 @@ PLACES_URL = os.environ.get("PLACES_URL", "https://places.googleapis.com")
 PLACES_API_KEY = os.environ.get("PLACES_API_KEY", "")
 PLACES_TIMEOUT = 10
 
+# Inbound speech to text: faster-whisper on CPU, Spanish, a two-minute cap (PLAN D16, §6.4).
+STT_MODEL = os.environ.get("STT_MODEL", "small")
+STT_LANGUAGE = os.environ.get("STT_LANGUAGE", "es")
+STT_MAX_SECONDS = int(os.environ.get("STT_MAX_SECONDS", "120"))
+
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://openrouter.ai/api/v1")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "")

@@ -278,6 +278,27 @@ def _apply_deadline_delete(args, proposal=None):
     return {"deleted": args["deadline_id"]}, [], "Quité el plazo que había apuntado."
 
 
+def _apply_note_add(args, proposal=None):
+    from apps.core.models import Note
+
+    note = Note.objects.create(
+        case_id=args["case_id"], body=args["body"], source=Note.TEXT
+    )
+    text = "Listo: guardé la nota en el expediente."
+    return (
+        {"note_id": note.pk},
+        [{"tool": "note_delete", "args": {"note_id": note.pk}}],
+        text,
+    )
+
+
+def _apply_note_delete(args, proposal=None):
+    from apps.core.models import Note
+
+    Note.objects.filter(pk=args["note_id"]).delete()
+    return {"deleted": args["note_id"]}, [], "Quité la nota que había guardado."
+
+
 def _apply_client_create(args, proposal=None):
     from apps.core.models import Client
 
@@ -310,6 +331,8 @@ APPLIERS = {
     "plan_visit": _apply_plan_visit,
     "deadline_create": _apply_deadline_create,
     "deadline_delete": _apply_deadline_delete,
+    "note_add": _apply_note_add,
+    "note_delete": _apply_note_delete,
     "client_create": _apply_client_create,
     "client_update": _apply_client_update,
 }

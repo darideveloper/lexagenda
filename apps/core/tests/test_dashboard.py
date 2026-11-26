@@ -8,7 +8,7 @@ from django_otp.plugins.otp_static.models import StaticDevice
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from apps.agenda.models import Appointment
-from apps.core.models import Case, Client
+from apps.core.models import Case, Client, Note
 from apps.core.tests.test_login import PASSWORD, totp_token
 
 
@@ -96,6 +96,29 @@ class ClientsPageTests(DashboardBase):
 
 
 class CasePageTests(DashboardBase):
+    def test_detail_shows_the_notes_as_a_timeline(self):
+        Note.objects.create(case=self.case, body="Llamar al juzgado el jueves.")
+        Note.objects.create(
+            case=self.case,
+            body="El cliente firmó el convenio.",
+            source=Note.VOICE,
+            transcript_model="small",
+        )
+
+        response = self.client.get(reverse("case", args=[self.case.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Llamar al juzgado el jueves.")
+        self.assertContains(response, "El cliente firmó el convenio.")
+        self.assertContains(response, "voz")
+        self.assertContains(response, "texto")
+        self.assertContains(response, "small")
+
+    def test_an_empty_timeline_says_so(self):
+        response = self.client.get(reverse("case", args=[self.case.pk]))
+
+        self.assertContains(response, "Sin notas todavía.")
+
     def test_detail_shows_the_case_and_its_appointments(self):
         Appointment.objects.create(
             case=self.case,

@@ -13,6 +13,7 @@ DOMAIN = {
     "BaseLocation",
     "Client",
     "Case",
+    "Note",
     "Appointment",
     "Deadline",
     "TravelBlock",

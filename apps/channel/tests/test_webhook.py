@@ -1,12 +1,15 @@
 import hashlib
 import hmac
 import json
+import tempfile
+from unittest import mock
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.assistant.models import Job, Message, Thread
 from apps.channel.signature import verify
+from apps.docs.models import InboundMedia
 
 SECRET = "secreto-de-prueba"
 DEVICE_A = "521771111111@s.whatsapp.net"
@@ -75,11 +78,27 @@ class WebhookTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Message.objects.count(), 0)
 
-    def test_audio_is_dropped(self):
-        response = self.post(self.event(audio="statics/media/nota.ogg", body=""))
+    @mock.patch("apps.docs.ingest.download", return_value=b"OggS-nota")
+    def test_a_voice_note_is_ingested_and_queued(self, download):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        override = override_settings(MEDIA_ROOT=tmp.name)
+        override.enable()
+        self.addCleanup(override.disable)
+
+        response = self.post(
+            self.event(audio="statics/media/nota.ogg", body="", mimetype="audio/ogg")
+        )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(Message.objects.count(), 0)
+        media = InboundMedia.objects.get(wamid="wamid-1")
+        message = Message.objects.get(wamid="wamid-1")
+        self.assertEqual(media.mime, "audio/ogg")
+        self.assertEqual(media.path.rsplit(".", 1)[-1], "ogg")
+        self.assertEqual(
+            Job.objects.get().payload,
+            {"message_id": message.pk, "media_id": media.pk, "kind": "audio"},
+        )
 
     def test_our_own_message_is_dropped(self):
         response = self.post(self.event(is_from_me=True))
