@@ -5,6 +5,7 @@ import datetime
 from django.core.management.base import BaseCommand
 
 from apps.assistant import brief
+from apps.core import health
 
 
 class Command(BaseCommand):
@@ -15,5 +16,11 @@ class Command(BaseCommand):
         parser.add_argument("--date", default=None, help="YYYY-MM-DD; today by default")
 
     def handle(self, *args, **options):
-        day = datetime.date.fromisoformat(options["date"]) if options["date"] else None
-        self.stdout.write(brief.render(options["kind"], day))
+        try:
+            day = datetime.date.fromisoformat(options["date"]) if options["date"] else None
+            text = brief.render(options["kind"], day)
+        except Exception:
+            health.ping("brief", ok=False)
+            raise
+        health.ping("brief")
+        self.stdout.write(text)

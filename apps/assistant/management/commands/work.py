@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from apps.assistant import worker
+from apps.core import health
 
 
 class Command(BaseCommand):
@@ -11,6 +12,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         processed = 0
-        while processed < options["max_jobs"] and worker.run_once():
-            processed += 1
+        try:
+            while processed < options["max_jobs"] and worker.run_once():
+                processed += 1
+        except Exception:
+            health.ping("work", ok=False)
+            raise
+        health.ping("work")
         self.stdout.write(f"work: {processed} job(s)")

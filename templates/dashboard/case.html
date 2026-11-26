@@ -1,0 +1,46 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ case.reference }} · {{ instance_name }}{% endblock %}
+{% block body %}
+  <p class="muted">
+    <a href="{% url 'clients' %}">Clientes</a> /
+    <a href="{% url 'client' case.client_id %}">{{ case.client.name }}</a> /
+    {{ case.reference }}
+  </p>
+  <h1>{{ case.reference }} — {{ case.title }}</h1>
+  <p>
+    <span class="tag">{{ case.get_status_display }}</span>
+    · {{ case.client.name }} · {{ case.client.phone }}
+    {% if case.court %}· {{ case.court }}{% endif %}
+    · abierto {{ case.opened_on|date:"j M Y" }}
+    {% if case.closed_on %}· cerrado {{ case.closed_on|date:"j M Y" }}{% endif %}
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Actualizar estado</button>
+  </form>
+
+  <h2>Citas</h2>
+  {% if appointments %}
+    <table>
+      <thead><tr><th>Cuándo</th><th>Tipo</th><th>Título</th><th>Lugar</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for appointment in appointments %}
+          <tr>
+            <td>{{ appointment.starts_at|date:"j M Y H:i" }}</td>
+            <td>{{ appointment.get_kind_display }}</td>
+            <td>{{ appointment.title }}</td>
+            <td>{{ appointment.location_name|default:"—" }}</td>
+            <td>{{ appointment.get_status_display }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin citas registradas.</p>
+  {% endif %}
+
+  <h2>Notas</h2>
+  <p class="muted">Las notas del expediente llegan con la captura por voz (S3).</p>
+{% endblock %}

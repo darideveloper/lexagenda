@@ -1,0 +1,102 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Ops · {{ instance_name }}{% endblock %}
+{% block body %}
+  <h1>Consola de operación</h1>
+  <p class="muted">
+    Abogado: {% if lawyer %}{{ lawyer.username }}{% if lawyer.email %} · {{ lawyer.email }}{% else %} · sin correo{% endif %}{% else %}<strong>no configurado</strong>{% endif %}
+    · trabajos fallidos: {{ failed_count }}
+  </p>
+
+  <h2>2FA</h2>
+  <form method="post" action="{% url 'ops_reset_2fa' %}">
+    {% csrf_token %}
+    <p class="muted">Borra el dispositivo TOTP y los códigos de recuperación del abogado, y le avisa por correo. Queda auditado.</p>
+    <button type="submit">Restablecer 2FA</button>
+  </form>
+
+  <h2>Mensajes</h2>
+  {% if recent_messages %}
+    <table>
+      <thead><tr><th>Cuándo</th><th>Rol</th><th>Texto</th><th>Respondido</th></tr></thead>
+      <tbody>
+        {% for message in recent_messages %}
+          <tr>
+            <td>{{ message.created_at|date:"j M H:i" }}</td>
+            <td>{{ message.role }}</td>
+            <td>{{ message.text|truncatechars:120 }}</td>
+            <td>{% if message.replied_at %}{{ message.replied_at|date:"j M H:i" }}{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin mensajes.</p>
+  {% endif %}
+
+  <h2>Auditoría</h2>
+  {% if audits %}
+    <table>
+      <thead><tr><th>Cuándo</th><th>Herramienta</th><th>Ok</th><th>Modelo</th><th>Latencia</th></tr></thead>
+      <tbody>
+        {% for audit in audits %}
+          <tr>
+            <td>{{ audit.created_at|date:"j M H:i" }}</td>
+            <td>{{ audit.tool }}</td>
+            <td>{% if audit.ok %}sí{% else %}no{% endif %}</td>
+            <td>{{ audit.model|default:"—" }}</td>
+            <td>{{ audit.latency_ms }} ms</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin filas de auditoría.</p>
+  {% endif %}
+
+  <h2>Propuestas</h2>
+  {% if proposals %}
+    <table>
+      <thead><tr><th>Hilo</th><th>Estado</th><th>Resumen</th><th>Caduca</th></tr></thead>
+      <tbody>
+        {% for proposal in proposals %}
+          <tr>
+            <td>{{ proposal.thread.jid }}</td>
+            <td>{{ proposal.get_status_display }}</td>
+            <td>{{ proposal.summary|truncatechars:140 }}</td>
+            <td>{{ proposal.expires_at|date:"j M H:i" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin propuestas.</p>
+  {% endif %}
+
+  <h2>Trabajos</h2>
+  {% if jobs %}
+    <table>
+      <thead><tr><th>#</th><th>Tipo</th><th>Estado</th><th>Intentos</th><th>Error</th><th></th></tr></thead>
+      <tbody>
+        {% for job in jobs %}
+          <tr>
+            <td>{{ job.pk }}</td>
+            <td>{{ job.kind }}</td>
+            <td>{{ job.status }}</td>
+            <td>{{ job.attempts }}</td>
+            <td>{{ job.error|truncatechars:80|default:"—" }}</td>
+            <td>
+              {% if job.status == "failed" %}
+                <form method="post" action="{% url 'ops_job_retry' job.pk %}">
+                  {% csrf_token %}
+                  <button type="submit">Reintentar</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin trabajos.</p>
+  {% endif %}
+{% endblock %}

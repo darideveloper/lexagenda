@@ -76,3 +76,12 @@ aritmética («20 días hábiles desde notificación 30 oct»); `POST /plazos/<i
 `verified_by`, `verified_at` y `verified_with_calendar` sin borrar la etiqueta, y un plazo
 verificado con otra versión muestra «calendario actualizado — re-verifica». `manage.py sweep`
 pasa a `missed` los plazos `open` con `due_date` anterior a hoy.
+## Dashboard
+
+`/clients/`, `/clients/<id>` y `/cases/<id>` piden sesión con TOTP y leen los modelos reales;
+sólo se escriben teléfono, correo y notas del cliente, y el estado del caso (PLAN §11). `/ops/`
+es sólo para `is_staff`: muestra mensajes, auditoría, propuestas y trabajos, reencola un trabajo
+`failed` y
+restablece el 2FA del abogado — auditado en `AuditLog(tool=2fa_reset)` y avisado por correo. Los
+tres temporizadores (`work`, `sweep`, `brief`) hacen ping a healthchecks.io
+(`HEALTHCHECK_<NAME>_URL`) y un ping caído nunca rompe la corrida.

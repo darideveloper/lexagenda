@@ -1,0 +1,35 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ client.name }} · {{ instance_name }}{% endblock %}
+{% block body %}
+  <p class="muted"><a href="{% url 'clients' %}">Clientes</a> / {{ client.name }}</p>
+  <h1>{{ client.name }}</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Guardar</button>
+  </form>
+
+  <h2>Casos</h2>
+  {% if cases %}
+    <table>
+      <thead><tr><th>Expediente</th><th>Título</th><th>Juzgado</th><th>Estado</th><th>Abierto</th></tr></thead>
+      <tbody>
+        {% for case in cases %}
+          <tr>
+            <td><a href="{% url 'case' case.pk %}">{{ case.reference }}</a></td>
+            <td>{{ case.title }}</td>
+            <td>{{ case.court|default:"—" }}</td>
+            <td>{{ case.get_status_display }}</td>
+            <td>{{ case.opened_on|date:"j M Y" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin casos registrados.</p>
+  {% endif %}
+
+  <h2>Notas del cliente</h2>
+  <p>{{ client.notes|linebreaksbr|default:"—" }}</p>
+{% endblock %}

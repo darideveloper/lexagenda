@@ -3,6 +3,7 @@
 <head><meta charset="utf-8"><title>Hoy · {{ instance_name }}</title></head>
 <body>
   <h1>{{ instance_name }} · {{ day|date:"l j \d\e F" }}</h1>
+  <p><a href="{% url 'clients' %}">Clientes</a></p>
   {% if appointments %}
     <ul>
       {% for appt in appointments %}

@@ -83,6 +83,17 @@ LAWYER_JID = os.environ.get("LAWYER_JID", "")
 ASSISTANT_NUMBER = os.environ.get("ASSISTANT_NUMBER", "")
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 
+# The account the dashboard belongs to; the ops console resets its 2FA (PLAN §11).
+LAWYER_USERNAME = os.environ.get("LAWYER_USERNAME", "abogado")
+
+# The 2FA reset emails the lawyer; an unimplemented relay fails loudly in the reset view.
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "0") == "1"
+DEFAULT_FROM_EMAIL = os.environ.get("EMAIL_FROM", "lexagenda@localhost")
+
 GOWA_URL = os.environ.get("GOWA_URL", "http://gowa:3000")
 GOWA_BASIC_AUTH = os.environ.get("GOWA_BASIC_AUTH", "")
 GOWA_DEVICE_A = os.environ.get("GOWA_DEVICE_A", "")

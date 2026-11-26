@@ -1,0 +1,22 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Clientes · {{ instance_name }}{% endblock %}
+{% block body %}
+  <h1>Clientes</h1>
+  {% if clients %}
+    <table>
+      <thead><tr><th>Nombre</th><th>Teléfono</th><th>Casos abiertos</th><th></th></tr></thead>
+      <tbody>
+        {% for client in clients %}
+          <tr>
+            <td><a href="{% url 'client' client.pk %}">{{ client.name }}</a>{% if not client.is_active %} <span class="tag">inactivo</span>{% endif %}</td>
+            <td>{{ client.phone }}</td>
+            <td>{{ client.open_cases }}</td>
+            <td><a href="{% url 'client' client.pk %}">Ver</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Sin clientes todavía.</p>
+  {% endif %}
+{% endblock %}
